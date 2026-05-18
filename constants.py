@@ -1,32 +1,34 @@
-BLACK = (0,0,0)
-RED = (255,0,0)
-ORANGE = (255,152,0)
-DEEP_ORANGE = (255,87,34)
-BROWN = (121,85,72)
-GREEN = (0,128,0)
-L_GREEN = (139,195,74)
-TEAL = (0,150,136)
-BLUE  = (33,150,136)
-PURPLE = (156,39,176)
-PINK = (234,30,99)
-DEEP_PURPLE = (103,58,183)
+# ── Tile colours
+# Each power-of-2 tile gets its own warm/pastel colour.
+# Values beyond 2048 fall back to GOLD so the game never crashes.
 
+BLACK       = (  0,   0,   0)
+WHITE       = (255, 255, 255)
+GRAY_DARK   = ( 30,  30,  40)
 
 color_dict = {
-    0:BLACK,
-    2:RED,
-    4:GREEN,
-    8:PURPLE,
-    16:DEEP_PURPLE,
-    32:DEEP_ORANGE,
-    64:TEAL,
-    128:L_GREEN,
-    256:PINK,
-    512:ORANGE,
-    1024:BLACK,
-    2048:BROWN
+    0:    ( 50,  50,  65),   # empty cell – dark slate
+    2:    (238, 228, 218),   # cream
+    4:    (237, 224, 200),   # warm wheat
+    8:    (242, 177, 121),   # peach
+    16:   (245, 149,  99),   # orange
+    32:   (246, 124,  95),   # coral
+    64:   (246,  94,  59),   # deep orange-red
+    128:  (237, 207, 114),   # gold-yellow
+    256:  (237, 204,  97),   # golden
+    512:  (237, 200,  80),   # amber
+    1024: (237, 197,  63),   # bright gold
+    2048: (237, 194,  46),   # vivid gold
 }
 
-def getColor(i):
+FALLBACK_COLOR = (60, 180, 120)   # emerald – shown for 4096+
 
-    return color_dict[i]
+
+def getColor(value: int) -> tuple:
+    """Return the RGB colour for *value*, with a safe fallback."""
+    return color_dict.get(value, FALLBACK_COLOR)
+
+
+def getTextColor(value: int) -> tuple:
+    """Dark text for light tiles (2, 4), white for everything else."""
+    return (119, 110, 101) if value in (0, 2, 4) else WHITE
