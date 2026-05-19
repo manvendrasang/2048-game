@@ -1,26 +1,36 @@
-# 2048-game
+# 2048 — Enhanced Edition v2.0
+## Features
 
-2048  –  improved edition
---------------------------
-Fixes vs the original
-  • Tile rendering was transposed (i/j axes swapped) – fixed
-  • getColor crashed on values > 2048 – fixed via fallback
-  • saveGameState used f.close instead of f.close() – fixed
-  • placeRandomTile could infinite-loop on a full board – fixed
-  • loadGameState didn't rebuild tileMatrix to the right size – fixed
-  • getRotations returned 0 for UP (no-op) instead of the correct value – fixed
-  • Score label was blitted 16× inside the tile loop – fixed
-  • reset() called main() recursively (stack overflow risk) – refactored
-  • DEFAULT_SCORE was defined but never used – removed
-  • Added math.floor instead of the hand-rolled floor()
+Feature             Details 
+Game Modes          Classic (infinite), Target (race to 2048, time logged), Time Attack (score race vs clock) 
+Leaderboard         Top 5 scores saved locally with mode, time, date 
+Stats Screen        Games played, highest tile ever, total/avg score, total/avg moves 
+Particle Bursts     Different burst for 256 / 512 / 1024 / 2048+ merges 
+Screen Shake        On game over 
+Sound Effects       Procedurally generated — move, merge, undo, win, lose, click 
+Dark / Light Theme  Toggle with 'T' 
+Pause Screen        'P' to pause/resume 
+Undo                Up to 10 undos per game 
+Save / Load         'S' to save, 'L' to load (also from main menu) 
+Board Sizes         Keys '3'–'6' switch board size mid-game 
 
-New features
-  • Best-score tracking (persisted to disk)
-  • Combo multiplier: consecutive merges in one move reward bonus points
-  • Animated score pop-up (+N) on each merge
-  • Smooth tile slide/pop animations
-  • Tile "birth" animation for newly placed tiles
-  • Full HUD: score, best, move counter, undo button hint
-  • Gradient-style board background with rounded rects
-  • Game-Over overlay with semi-transparent dim
-  • Key hints rendered in the HUD
+Controls (In-Game)
+Key      Action 
+← ↑ ↓ →  Move tiles 
+U        Undo last move 
+R        Restart 
+S        Save game 
+P        Pause / Resume 
+T        Toggle Dark/Light theme 
+M        Toggle Sound on/off 
+3–6      Change board size 
+ESC      Return to main menu 
+
+How to Run
+execute main.py
+
+Data Files (auto-created in 'data/')
+- leaderboard.json = top 5 scores
+- stats.json       = lifetime stats
+- savedata.json    =last saved game
+- best.txt         =all-time best score
