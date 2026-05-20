@@ -1,17 +1,15 @@
-# ── screens/game_renderer.py
-# Stateless drawing functions for the in-game view.
-
 import pygame
+import constants as C
 from constants import (
     WIN_W, WIN_H, BOARD_PX, BOARD_TOP, BOARD_LEFT, PADDING,
-    MODE_TARGET, MODE_TIME_ATTACK, TIME_ATTACK_SECONDS,
+    MODE_TARGET, MODE_TIME_ATTACK,
 )
 from utils.drawing import draw_rounded_rect, font, blit_centered, format_time
 from constants import getColor, getTextColor
 import utils.theme as theme
 
 
-# ─────────────────────── geometry helper ──────────────────────────────── #
+# geometry helper 
 
 def tile_rect(row: int, col: int, size: int) -> pygame.Rect:
     cell = (BOARD_PX - PADDING * (size + 1)) / size
@@ -25,7 +23,7 @@ def tile_center(row: int, col: int, size: int) -> tuple[int, int]:
     return r.centerx, r.centery
 
 
-# ─────────────────────── board ────────────────────────────────────────── #
+# board
 
 def _choose_tile_font(value: int) -> pygame.font.Font:
     d = len(str(value))
@@ -54,12 +52,11 @@ def draw_board(surface: pygame.Surface, gs):
             draw_rounded_rect(surface, color, tr, max(4, int(10 * sc)))
 
             if val:
-                tf    = _choose_tile_font(val)
-                lbl   = tf.render(str(val), True, getTextColor(val))
+                tf  = _choose_tile_font(val)
+                lbl = tf.render(str(val), True, getTextColor(val))
                 surface.blit(lbl, lbl.get_rect(center=(cx, cy)))
 
-
-# ─────────────────────── HUD ──────────────────────────────────────────── #
+# HUD 
 
 def draw_hud(surface: pygame.Surface, gs, sound_on: bool, paused: bool):
     th = theme.get()
@@ -73,7 +70,7 @@ def draw_hud(surface: pygame.Surface, gs, sound_on: bool, paused: bool):
         box = pygame.Rect(x, y, w, h)
         draw_rounded_rect(surface, th["score_box_bg"], box, 10)
         lbl = font("small").render(label_txt, True, th["lbl_text"])
-        val = font("hud").render(val_txt, True, th["hud_text"])
+        val = font("hud").render(val_txt,     True, th["hud_text"])
         surface.blit(lbl, lbl.get_rect(centerx=x+w//2, top=y+6))
         surface.blit(val, val.get_rect(centerx=x+w//2, top=y+24))
 
@@ -84,32 +81,27 @@ def draw_hud(surface: pygame.Surface, gs, sound_on: bool, paused: bool):
     mv = font("small").render(f"Moves: {gs.moves}", True, th["move_text"])
     surface.blit(mv, (BOARD_LEFT, 90))
 
-    # Mode label + timer
+    # Mode timer
     mode_y = 90
     if gs.mode == MODE_TARGET:
-        elapsed_str = format_time(gs.elapsed)
-        t_lbl = font("timer").render(f"⏱ {elapsed_str}", True, th["accent"])
+        t_lbl = font("timer").render(f"  {format_time(gs.elapsed)}", True, th["accent"])
         surface.blit(t_lbl, t_lbl.get_rect(right=WIN_W - 30, centery=mode_y + 10))
         m_lbl = font("small").render(f"Target: {gs.target_tile}", True, th["lbl_text"])
         surface.blit(m_lbl, m_lbl.get_rect(right=WIN_W - 30, top=mode_y + 28))
-
     elif gs.mode == MODE_TIME_ATTACK:
         remaining = max(0, gs.time_budget - gs.elapsed)
-        r_str  = format_time(remaining)
-        color  = (220, 80, 80) if remaining < 20 else th["accent"]
-        t_lbl  = font("timer").render(f"⏱ {r_str}", True, color)
+        color     = (220, 80, 80) if remaining < 20 else th["accent"]
+        t_lbl     = font("timer").render(f"  {format_time(remaining)}", True, color)
         surface.blit(t_lbl, t_lbl.get_rect(right=WIN_W - 30, centery=mode_y + 10))
 
     # Hint bar
-    sound_icon = "♪ ON" if sound_on else "♪ OFF"
-    theme_icon = "☀ Light" if theme.name() == "dark" else "☾ Dark"
-    hints = (f"[←↑↓→] Move  [U] Undo  [S] Save  [P] Pause  "
-             f"[T] {theme_icon}  [M] {sound_icon}  [ESC] Menu")
+    sound_icon = "[M] Mute" if sound_on else "[M] Unmute"
+    hints = f"[Arrows] Move  [U] Undo  [S] Save  [P] Pause  [T] Theme  {sound_icon}  [ESC] Menu"
     hint_surf = font("hint").render(hints, True, th["hint_text"])
-    surface.blit(hint_surf, (BOARD_LEFT, WIN_H - 22))
+    surface.blit(hint_surf, (WIN_W//2 - hint_surf.get_width()//2, WIN_H - 20))
 
 
-# ─────────────────────── score popups ─────────────────────────────────── #
+# score popups
 
 def draw_score_popups(surface: pygame.Surface, gs):
     th = theme.get()
@@ -120,63 +112,40 @@ def draw_score_popups(surface: pygame.Surface, gs):
         surface.blit(txt, txt.get_rect(centerx=x, centery=int(y)))
 
 
-# ─────────────────────── game-over overlay ───────────────────────────── #
+# overlays
+
+def _overlay(surface, alpha=210):
+    ov = pygame.Surface((WIN_W, WIN_H), pygame.SRCALPHA)
+    ov.fill((18, 18, 28, alpha))
+    surface.blit(ov, (0, 0))
+
 
 def draw_game_over(surface: pygame.Surface, gs):
-    overlay = pygame.Surface((WIN_W, WIN_H), pygame.SRCALPHA)
-    overlay.fill((18, 18, 28, 210))
-    surface.blit(overlay, (0, 0))
-
+    _overlay(surface)
     th = theme.get()
     cx = WIN_W // 2
+    blit_centered(surface, font("over").render("Game Over!", True, (255, 100, 100)), cx, 210)
+    blit_centered(surface, font("hud").render(f"Score: {gs.score}", True, th["hud_text"]), cx, 295)
+    blit_centered(surface, font("hud").render(f"Best:  {gs.best}",  True, th["accent"]),   cx, 335)
+    blit_centered(surface, font("hud").render("[ R ] Restart   [ ESC ] Menu",
+                                              True, (180, 180, 200)), cx, 395)
 
-    go = font("over").render("Game Over!", True, (255, 100, 100))
-    blit_centered(surface, go, cx, 210)
-
-    sc = font("hud").render(f"Score: {gs.score}", True, th["hud_text"])
-    blit_centered(surface, sc, cx, 290)
-
-    bs = font("hud").render(f"Best:  {gs.best}", True, th["accent"])
-    blit_centered(surface, bs, cx, 330)
-
-    re = font("hud").render("Press  R  to restart  |  ESC for menu",
-                            True, (180, 180, 200))
-    blit_centered(surface, re, cx, 390)
-
-
-# ─────────────────────── win overlay ─────────────────────────────────── #
 
 def draw_win(surface: pygame.Surface, gs):
-    overlay = pygame.Surface((WIN_W, WIN_H), pygame.SRCALPHA)
-    overlay.fill((18, 18, 28, 200))
-    surface.blit(overlay, (0, 0))
-
+    _overlay(surface, 200)
     th = theme.get()
     cx = WIN_W // 2
-
-    w = font("over").render("You Win! 🎉", True, th["accent"])
-    blit_centered(surface, w, cx, 200)
-
-    sc = font("hud").render(f"Score: {gs.score}", True, th["hud_text"])
-    blit_centered(surface, sc, cx, 280)
-
+    blit_centered(surface, font("over").render("You Win!", True, th["accent"]), cx, 200)
+    blit_centered(surface, font("hud").render(f"Score: {gs.score}", True, th["hud_text"]), cx, 285)
     if gs.mode == MODE_TARGET:
-        t = font("hud").render(f"Time:  {format_time(gs.elapsed)}", True, th["accent"])
-        blit_centered(surface, t, cx, 320)
+        blit_centered(surface, font("hud").render(
+            f"Time:  {format_time(gs.elapsed)}", True, th["accent"]), cx, 325)
+    blit_centered(surface, font("hud").render("[ R ] Restart   [ ESC ] Menu",
+                                              True, (180, 180, 200)), cx, 395)
 
-    re = font("hud").render("Press  R  to restart  |  ESC for menu",
-                            True, (180, 180, 200))
-    blit_centered(surface, re, cx, 390)
-
-
-# ─────────────────────── pause overlay ──────────────────────────────── #
 
 def draw_pause(surface: pygame.Surface):
-    overlay = pygame.Surface((WIN_W, WIN_H), pygame.SRCALPHA)
-    overlay.fill((18, 18, 28, 180))
-    surface.blit(overlay, (0, 0))
+    _overlay(surface, 180)
     th = theme.get()
-    p = font("over").render("PAUSED", True, th["hud_text"])
-    blit_centered(surface, p, WIN_W//2, WIN_H//2 - 40)
-    r = font("hud").render("Press  P  to resume", True, (160, 160, 180))
-    blit_centered(surface, r, WIN_W//2, WIN_H//2 + 30)
+    blit_centered(surface, font("over").render("PAUSED",              True, th["hud_text"]), WIN_W//2, WIN_H//2 - 40)
+    blit_centered(surface, font("hud").render("[ P ] Resume",        True, (160,160,180)), WIN_W//2, WIN_H//2 + 30)

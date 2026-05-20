@@ -2,8 +2,14 @@ import sys
 import pygame
 from pygame.locals import QUIT, KEYDOWN
 
-# ── bootstrap pygame before any other local import that uses fonts
 pygame.init()
+
+# fullscreen first, then resolve panel offset
+import constants as C
+info = pygame.display.Info()
+DISPLAY = pygame.display.set_mode((info.current_w, info.current_h), pygame.FULLSCREEN)
+pygame.display.set_caption("2048")
+C.set_display_size(info.current_w, info.current_h)
 
 from constants import (
     WIN_W, WIN_H, DEFAULT_BOARD,
@@ -23,16 +29,17 @@ from screens.leaderboard import LeaderboardScreen
 from screens.stats       import StatsScreen
 from data.persistence    import load_leaderboard, load_stats
 
-# ── display setup
-SURFACE = pygame.display.set_mode((WIN_W, WIN_H))
-pygame.display.set_caption("2048")
 CLOCK = pygame.time.Clock()
-
 init_fonts()
 sound.init()
 
+# panel surface — all game drawing happens here, then blitted to DISPLAY
+PANEL = pygame.Surface((WIN_W, WIN_H))
 
-#  App state
+
+
+#  Screen IDs
+
 SCREEN_MENU        = "menu"
 SCREEN_GAME        = "game"
 SCREEN_LEADERBOARD = "leaderboard"
@@ -42,17 +49,17 @@ current_screen = SCREEN_MENU
 gs             = None
 paused         = False
 
-particle_sys   = particles.ParticleSystem()
-shake_sys      = screenshake.ScreenShake()
+particle_sys = particles.ParticleSystem()
+shake_sys    = screenshake.ScreenShake()
 
-menu_screen   = MenuScreen(SURFACE)
-leader_screen = LeaderboardScreen(SURFACE)
-stats_screen  = StatsScreen(SURFACE)
+menu_screen   = MenuScreen(PANEL)
+leader_screen = LeaderboardScreen(PANEL)
+stats_screen  = StatsScreen(PANEL)
 
 
-# ─────────────────────────────────────────────────────────────────────────── #
-#  Game helpers
-# ─────────────────────────────────────────────────────────────────────────── #
+
+#  Helpers
+
 
 DIRECTION_MAP = {
     pygame.K_UP:    "up",
@@ -60,6 +67,19 @@ DIRECTION_MAP = {
     pygame.K_LEFT:  "left",
     pygame.K_RIGHT: "right",
 }
+
+
+def _blit_panel(ox=0, oy=0):
+    """Blit the panel onto the fullscreen display, centred + optional shake."""
+    th = theme_mod.get()
+    DISPLAY.fill(th.get("outer_bg", (0, 0, 0)))
+    DISPLAY.blit(PANEL, (C.PANEL_OX + ox, C.PANEL_OY + oy))
+    # subtle border around panel
+    pygame.draw.rect(
+        DISPLAY, th.get("divider", (60, 60, 80)),
+        pygame.Rect(C.PANEL_OX + ox - 1, C.PANEL_OY + oy - 1, WIN_W + 2, WIN_H + 2),
+        1,
+    )
 
 
 def start_game(mode=MODE_CLASSIC, size=DEFAULT_BOARD,
@@ -81,16 +101,31 @@ def load_game():
         paused = False
         particle_sys.clear()
         current_screen = SCREEN_GAME
-    else:
-        # nothing to load – stay on menu
-        pass
 
 
-# ─────────────────────────────────────────────────────────────────────────── #
-#  Event handlers per screen
-# ─────────────────────────────────────────────────────────────────────────── #
+
+#  Global key handler (T = theme, M = mute — active on every screen)
+
+
+def handle_global_key(event) -> bool:
+    """Returns True if the key was consumed globally."""
+    if event.type != KEYDOWN:
+        return False
+    if event.key == pygame.K_t:
+        theme_mod.toggle()
+        return True
+    if event.key == pygame.K_m:
+        sound.toggle()
+        return True
+    return False
+
+
+
+#  Per-screen event handlers
+
 
 def handle_menu_event(event):
+    global current_screen
     result = menu_screen.handle_event(event)
     if result == MODE_CLASSIC:
         start_game(mode=MODE_CLASSIC)
@@ -101,7 +136,6 @@ def handle_menu_event(event):
     elif result == "load":
         load_game()
     elif result == "leaderboard":
-        global current_screen
         current_screen = SCREEN_LEADERBOARD
     elif result == "stats":
         current_screen = SCREEN_STATS
@@ -119,11 +153,9 @@ def handle_game_event(event):
     if k == pygame.K_ESCAPE:
         current_screen = SCREEN_MENU
         return
-
     if k == pygame.K_p:
         paused = not paused
         return
-
     if paused:
         return
 
@@ -132,13 +164,11 @@ def handle_game_event(event):
         moved = gs.move(DIRECTION_MAP[k])
         if moved:
             sound.play("move")
-            # particles + sound for merges
             for (r, c, val) in gs.merge_events:
                 cx, cy = tile_center(r, c, gs.size)
                 particle_sys.burst(cx, cy, val)
                 if val >= 512:
                     sound.play("merge")
-            # screen shake on game over
             if gs.game_over and not gs.won:
                 shake_sys.shake(0.7)
                 sound.play("shake")
@@ -148,107 +178,92 @@ def handle_game_event(event):
     elif k == pygame.K_r:
         start_game(mode=gs.mode, size=gs.size,
                    target_tile=gs.target_tile, time_budget=gs.time_budget)
-
     elif k == pygame.K_u and not gs.game_over:
         gs.pop_undo()
         sound.play("undo")
-
     elif k == pygame.K_s:
         gs.save()
-
-    elif k == pygame.K_t:
-        theme_mod.toggle()
-
-    elif k == pygame.K_m:
-        sound.toggle()
-
     elif pygame.K_3 <= k <= pygame.K_6 and not gs.game_over:
         start_game(mode=gs.mode, size=k - pygame.K_0,
                    target_tile=gs.target_tile, time_budget=gs.time_budget)
 
 
-# ─────────────────────────────────────────────────────────────────────────── #
+
 #  Main loop
-# ─────────────────────────────────────────────────────────────────────────── #
+
 
 def main():
     global current_screen
 
-    running = True
-    while running:
-        dt = CLOCK.tick(60) / 1000.0   # seconds
+    while True:
+        dt = CLOCK.tick(60) / 1000.0
 
-        # ── events
+        # events
         for event in pygame.event.get():
             if event.type == QUIT:
                 pygame.quit()
                 sys.exit()
+
+            # global keys first (T / M) — skip if consumed
+            if handle_global_key(event):
+                continue
 
             if current_screen == SCREEN_MENU:
                 handle_menu_event(event)
             elif current_screen == SCREEN_GAME:
                 handle_game_event(event)
             elif current_screen == SCREEN_LEADERBOARD:
-                result = leader_screen.handle_event(event)
-                if result == "back":
+                if leader_screen.handle_event(event) == "back":
                     current_screen = SCREEN_MENU
             elif current_screen == SCREEN_STATS:
-                result = stats_screen.handle_event(event)
-                if result == "back":
+                if stats_screen.handle_event(event) == "back":
                     current_screen = SCREEN_MENU
 
-        # ── update
+        # update
         if current_screen == SCREEN_MENU:
             menu_screen.update()
-
         elif current_screen == SCREEN_GAME and gs:
             if not paused:
                 gs.tick_animations(dt)
                 particle_sys.update()
-            shake_sys.update()   # always update shake (drains naturally)
-
+            shake_sys.update()
         elif current_screen == SCREEN_LEADERBOARD:
             leader_screen.update()
-
         elif current_screen == SCREEN_STATS:
             stats_screen.update()
 
-        # ── draw
-        ox, oy = shake_sys.update() if current_screen == SCREEN_GAME else (0, 0)
+        # draw to PANEL
+        th = theme_mod.get()
 
         if current_screen == SCREEN_MENU:
             menu_screen.draw()
+            _blit_panel()
 
         elif current_screen == SCREEN_GAME and gs:
-            th = theme_mod.get()
-            SURFACE.fill(th["bg"])
-            # apply shake offset by drawing onto a sub-surface
-            if ox or oy:
-                tmp = pygame.Surface((WIN_W, WIN_H))
-                tmp.fill(th["bg"])
-                draw_hud(tmp, gs, sound.is_enabled(), paused)
-                draw_board(tmp, gs)
-                draw_score_popups(tmp, gs)
-                particle_sys.draw(tmp)
-                SURFACE.blit(tmp, (ox, oy))
-            else:
-                draw_hud(SURFACE, gs, sound.is_enabled(), paused)
-                draw_board(SURFACE, gs)
-                draw_score_popups(SURFACE, gs)
-                particle_sys.draw(SURFACE)
+            PANEL.fill(th["bg"])
+            draw_hud(PANEL, gs, sound.is_enabled(), paused)
+            draw_board(PANEL, gs)
+            draw_score_popups(PANEL, gs)
+            particle_sys.draw(PANEL)
 
             if gs.game_over and gs.won:
-                draw_win(SURFACE, gs)
+                draw_win(PANEL, gs)
             elif gs.game_over:
-                draw_game_over(SURFACE, gs)
+                draw_game_over(PANEL, gs)
             elif paused:
-                draw_pause(SURFACE)
+                draw_pause(PANEL)
+
+            # screen shake: offset the blit
+            ox, oy = shake_sys.update()
+            _blit_panel(ox, oy)
 
         elif current_screen == SCREEN_LEADERBOARD:
             leader_screen.draw(load_leaderboard())
+            _blit_panel()
 
         elif current_screen == SCREEN_STATS:
             stats_screen.draw(load_stats())
+            _blit_panel()
 
         pygame.display.flip()
 

@@ -1,7 +1,5 @@
-# ── utils/drawing.py
-# Shared drawing helpers used across all screens.
-
 import pygame
+import constants as C
 
 _fonts: dict = {}
 
@@ -36,8 +34,15 @@ def draw_rounded_rect_border(surface, color, rect, radius=10, width=2):
     pygame.draw.rect(surface, color, rect, border_radius=radius, width=width)
 
 
+def panel_mouse_pos() -> tuple[int, int]:
+    """Return mouse position translated into panel (WIN_W x WIN_H) coords."""
+    mx, my = pygame.mouse.get_pos()
+    return (mx - C.PANEL_OX, my - C.PANEL_OY)
+
+
 class Button:
-    """Simple clickable button with hover state."""
+    """Clickable button. All rects are in panel coords."""
+
     def __init__(self, rect: pygame.Rect, text: str,
                  bg=(60, 60, 80), fg=(220, 220, 230),
                  hover_bg=(80, 80, 110), radius=10,
@@ -51,13 +56,16 @@ class Button:
         self.font_name = font_name
         self._hovered  = False
 
-    def update(self, mouse_pos):
-        self._hovered = self.rect.collidepoint(mouse_pos)
+    def update(self, panel_pos):
+        self._hovered = self.rect.collidepoint(panel_pos)
 
     def is_clicked(self, event) -> bool:
-        return (event.type == pygame.MOUSEBUTTONDOWN
-                and event.button == 1
-                and self.rect.collidepoint(event.pos))
+        """event.pos is in display coords; we translate to panel coords."""
+        if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
+            return False
+        px = event.pos[0] - C.PANEL_OX
+        py = event.pos[1] - C.PANEL_OY
+        return self.rect.collidepoint(px, py)
 
     def draw(self, surface, theme: dict):
         bg = self.hover_bg if self._hovered else self.bg
