@@ -5,7 +5,7 @@ import utils.theme as theme
 import systems.sound as sound
 
 
-# shared button factory
+#  shared button factory  
 
 def _make_buttons(items, cx, start_y, w=260, h=52, gap=12):
     btns = []
@@ -16,7 +16,7 @@ def _make_buttons(items, cx, start_y, w=260, h=52, gap=12):
     return btns
 
 
-# MenuScreen
+#  MenuScreen  
 
 class MenuScreen:
     """
@@ -41,12 +41,12 @@ class MenuScreen:
         self._scroll = 0          # for controls tab scrolling (future-proof)
         self._build_all()
 
-    # build 
+    #  build  
 
     def _build_all(self):
         cx = WIN_W // 2
 
-        # main menu
+        #  main menu
         self._main_btns = _make_buttons([
             ("New Game",    "modes"),
             ("Load Game",   "load"),
@@ -56,15 +56,15 @@ class MenuScreen:
             ("Quit",        "quit"),
         ], cx, 240, w=280, h=50, gap=12)
 
-        # mode selector
+        #  mode selector  (extra gap so desc text has room)
         self._mode_btns = _make_buttons([
             ("Classic Mode",      MODE_CLASSIC),
             ("Target Mode",       MODE_TARGET),
             ("Time Attack Mode",  MODE_TIME_ATTACK),
             ("← Back",            "back"),
-        ], cx, 210, w=280, h=50, gap=12)
+        ], cx, 190, w=280, h=50, gap=38)
 
-        # options menu (toggle rows built dynamically in draw)
+        #  options menu (toggle rows built dynamically in draw)
         self._opt_btns = _make_buttons([
             ("Controls",  "controls"),
             ("← Back",    "back"),
@@ -81,7 +81,7 @@ class MenuScreen:
             "← Back", font_name="menu_med"
         )
 
-    # events 
+    #  events  
 
     def handle_event(self, event) -> str | None:
         if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
@@ -136,7 +136,7 @@ class MenuScreen:
 
         return None
 
-    # update 
+    #  update  
 
     def update(self):
         mp = panel_mouse_pos()
@@ -149,7 +149,7 @@ class MenuScreen:
         elif self._sub == self._SUB_CONTROLS:
             self._ctrl_back_btn.update(mp)
 
-    # draw
+    #  draw  
 
     def draw(self):
         th  = theme.get()
@@ -200,12 +200,13 @@ class MenuScreen:
             btn.draw(srf, th)
             if desc:
                 d = font("hint").render(desc, True, th["hint_text"])
-                srf.blit(d, (btn.rect.left, btn.rect.bottom + 3))
+                # render below the button, vertically centred in the gap
+                srf.blit(d, (btn.rect.left + 6, btn.rect.bottom + 6))
 
     def _draw_options(self, srf, th):
         self._draw_header(srf, th, "Options")
 
-        # Sound toggle
+        #  Sound toggle
         self._draw_toggle(
             srf, th,
             self._toggle_sound_rect,
@@ -215,7 +216,7 @@ class MenuScreen:
             off_text="OFF",
         )
 
-        # Theme toggle
+        #  Theme toggle
         is_dark = theme.name() == "dark"
         self._draw_toggle(
             srf, th,
@@ -280,7 +281,7 @@ class MenuScreen:
         srf.blit(key_hdr, (left, start_y))
         srf.blit(act_hdr, (right, start_y))
         pygame.draw.line(srf, th["divider"],
-                         (left, start_y + 22), (WIN_W - left, start_y + 22), 1)
+                        (left, start_y + 22), (WIN_W - left, start_y + 22), 1)
 
         for i, (key, action) in enumerate(controls):
             y   = start_y + 30 + i * row_h

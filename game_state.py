@@ -1,7 +1,3 @@
-# ── game_state.py
-# Pure game logic: board, movement, undo, scoring, win/lose detection.
-# No pygame drawing here – only state.
-
 import random
 from constants import (
     DEFAULT_BOARD, WIN_W, BOARD_TOP, BOARD_PX,
@@ -9,7 +5,8 @@ from constants import (
     TARGET_TILE_DEFAULT, TIME_ATTACK_SECONDS,
 )
 from data.persistence import (
-    load_best, save_best, save_game, load_game,
+    load_best, save_best,
+    save_to_slot, load_from_slot,
     add_leaderboard_entry, record_game,
 )
 
@@ -21,8 +18,8 @@ class GameState:
         self.size         = size
         self.mode         = mode
         self.target_tile  = target_tile
-        self.time_budget  = time_budget      # seconds (time-attack only)
-        self.elapsed      = 0.0              # seconds (target-mode timer)
+        self.time_budget  = time_budget
+        self.elapsed      = 0.0
 
         self.matrix       = [[0]*size for _ in range(size)]
         self.score        = 0
@@ -30,28 +27,24 @@ class GameState:
         self.moves        = 0
         self.game_over    = False
         self.won          = False
-        self.win_shown    = False            # so win screen shows once
-        self.undo_stack   = []               # list of (matrix_snap, score, moves, elapsed)
+        self.win_shown    = False
+        self.undo_stack   = []
 
-        # animation bookkeeping
         self.tile_scales  = [[1.0]*size for _ in range(size)]
-        self.score_popups = []               # [x, y, value, alpha, dy]
+        self.score_popups = []
+        self.merge_events = []
 
-        # merge events for this frame (consumed by renderer / particles)
-        self.merge_events = []               # list of (row, col, value)
+    # slot-based persistence 
 
-    # ─────────────────────────── persistence ───────────────────────────── #
-
-    def save(self) -> bool:
-        return save_game(
-            matrix=self.matrix, size=self.size,
-            score=self.score, moves=self.moves,
-            mode=self.mode, elapsed=self.elapsed,
-            target_tile=self.target_tile,
+    def save(self, slot: int) -> bool:
+        return save_to_slot(
+            slot=slot, matrix=self.matrix, size=self.size,
+            score=self.score, moves=self.moves, mode=self.mode,
+            elapsed=self.elapsed, target_tile=self.target_tile,
         )
 
-    def load(self) -> bool:
-        data = load_game()
+    def load(self, slot: int) -> bool:
+        data = load_from_slot(slot)
         if data is None:
             return False
         self.size        = data["size"]
@@ -68,7 +61,7 @@ class GameState:
         self.undo_stack  = []
         return True
 
-    # ─────────────────────────── undo ──────────────────────────────────── #
+    # undo
 
     def push_undo(self):
         snap = [row[:] for row in self.matrix]
@@ -88,7 +81,7 @@ class GameState:
         self.game_over   = False
         self.won         = False
 
-    # ─────────────────────────── tile helpers ──────────────────────────── #
+    # tile helpers
 
     def empty_cells(self):
         return [(r, c) for r in range(self.size)
@@ -105,7 +98,7 @@ class GameState:
     def highest_tile(self) -> int:
         return max(max(row) for row in self.matrix)
 
-    # ─────────────────────────── movement ──────────────────────────────── #
+    # movement
 
     def _rotate_cw(self):
         n = self.size
@@ -116,27 +109,21 @@ class GameState:
         self.matrix = new
 
     def _slide_left(self) -> tuple[bool, int, list]:
-        """Returns (moved, points, merge_positions_in_rotated_coords)."""
-        moved   = False
-        points  = 0
-        merges  = []   # (row, col, value) in current (possibly rotated) frame
-        n       = self.size
-        combo   = 0
-
+        moved, points, merges = False, 0, []
+        combo = 0
+        n = self.size
         for r in range(n):
             row = [v for v in self.matrix[r] if v != 0]
-            merged = []
-            skip   = False
+            merged, skip = [], False
             for i in range(len(row)):
                 if skip:
                     skip = False
                     continue
                 if i+1 < len(row) and row[i] == row[i+1]:
-                    val    = row[i] * 2
+                    val = row[i] * 2
                     merged.append(val)
-                    combo  += 1
-                    bonus   = val * (1 + 0.1 * combo)
-                    points += int(bonus)
+                    combo += 1
+                    points += int(val * (1 + 0.1 * combo))
                     merges.append((r, len(merged)-1, val))
                     skip = True
                 else:
@@ -148,19 +135,15 @@ class GameState:
                     if val and val != self.matrix[r][c]:
                         self.tile_scales[r][c] = 1.2
             self.matrix[r] = merged
-
         return moved, points, merges
 
     def move(self, direction: str) -> bool:
         rotations = {"left": 0, "up": 1, "right": 2, "down": 3}
         rot = rotations[direction]
-
         for _ in range(rot):
             self._rotate_cw()
-
         moved, pts, raw_merges = self._slide_left()
 
-        # rotate merge positions back to screen coords
         self.merge_events = []
         for (rr, rc, val) in raw_merges:
             r2, c2 = rr, rc
@@ -179,12 +162,11 @@ class GameState:
                 save_best(self.best)
             self.place_random()
 
-            # win detection
             if not self.won:
                 ht = self.highest_tile()
                 if (self.mode == MODE_TARGET and ht >= self.target_tile) or \
-                   (self.mode == MODE_CLASSIC and ht >= 2048):
-                    self.won      = True
+                    (self.mode == MODE_CLASSIC and ht >= 2048):
+                    self.won       = True
                     self.game_over = True
                     self._finish_game()
 
@@ -196,7 +178,6 @@ class GameState:
                 self.score_popups.append(
                     [WIN_W//2, BOARD_TOP + BOARD_PX//2, pts, 255, -2.0]
                 )
-
         return moved
 
     def _finish_game(self):
@@ -220,13 +201,11 @@ class GameState:
                     return True
         return False
 
-    # ─────────────────────────── reset ─────────────────────────────────── #
-
     def reset(self, size=None, mode=None, target_tile=None, time_budget=None):
-        if size         is not None: self.size        = size
-        if mode         is not None: self.mode        = mode
-        if target_tile  is not None: self.target_tile = target_tile
-        if time_budget  is not None: self.time_budget = time_budget
+        if size        is not None: self.size        = size
+        if mode        is not None: self.mode        = mode
+        if target_tile is not None: self.target_tile = target_tile
+        if time_budget is not None: self.time_budget = time_budget
         self.matrix       = [[0]*self.size for _ in range(self.size)]
         self.score        = 0
         self.moves        = 0
@@ -241,10 +220,7 @@ class GameState:
         self.place_random()
         self.place_random()
 
-    # ─────────────────────────── animation tick ────────────────────────── #
-
     def tick_animations(self, dt: float = 1/60):
-        """dt in seconds."""
         n = self.size
         for r in range(n):
             for c in range(n):
@@ -262,13 +238,10 @@ class GameState:
                 alive.append(p)
         self.score_popups = alive
 
-        # advance timers
         if not self.game_over:
-            if self.mode == MODE_TARGET:
+            if self.mode in (MODE_TARGET, MODE_TIME_ATTACK):
                 self.elapsed += dt
-            elif self.mode == MODE_TIME_ATTACK:
-                self.elapsed += dt
-                if self.elapsed >= self.time_budget:
+                if self.mode == MODE_TIME_ATTACK and self.elapsed >= self.time_budget:
                     self.elapsed   = self.time_budget
                     self.game_over = True
                     self._finish_game()
