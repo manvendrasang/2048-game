@@ -28,14 +28,14 @@ from screens.game_renderer import (
 from screens.leaderboard import LeaderboardScreen
 from screens.stats import StatsScreen
 from screens.save_slot_screen import SaveSlotScreen
-from data.persistence import load_leaderboard, load_stats, migrate_legacy_save
+from data.persistence import load_stats, migrate_legacy_save
 
 CLOCK = pygame.time.Clock()
 init_fonts()
 sound.init()
 migrate_legacy_save()
 
-# Panel: slightly larger than WIN_W x WIN_H
+# Panel: slightly larger than WIN_W x WIN_H for a roomier feel
 PANEL_W = WIN_W + 20   # 560
 PANEL_H = WIN_H + 20   # 680
 PANEL   = pygame.Surface((WIN_W, WIN_H))   # game still draws at WIN_W x WIN_H
@@ -47,7 +47,7 @@ BORDER_OY = C.PANEL_OY - 10
 # Background particle system (runs on display coords)
 BG = BgParticleSystem(info.current_w, info.current_h)
 
-# Screen IDs
+# ── Screen IDs
 SCREEN_MENU      = "menu"
 SCREEN_GAME      = "game"
 SCREEN_LEADERBOARD = "leaderboard"
@@ -68,7 +68,7 @@ stats_screen     = StatsScreen(PANEL)
 save_slot_screen = SaveSlotScreen(PANEL)
 
 
-# Panel with thick rounded border
+#  Panel blit with thick rounded border
 
 def _blit_panel(ox: int = 0, oy: int = 0):
     th = theme_mod.get()
@@ -83,8 +83,8 @@ def _blit_panel(ox: int = 0, oy: int = 0):
     shadow = pygame.Surface((PANEL_W + 12, PANEL_H + 12), pygame.SRCALPHA)
     shadow.fill((0, 0, 0, 80))
     pygame.draw.rect(shadow, (0, 0, 0, 0),
-                    pygame.Rect(0, 0, PANEL_W + 12, PANEL_H + 12),
-                    border_radius=22)
+                     pygame.Rect(0, 0, PANEL_W + 12, PANEL_H + 12),
+                     border_radius=22)
     DISPLAY.blit(shadow, (BORDER_OX + ox + 4, BORDER_OY + oy + 6))
 
     # 4. Panel fill background (slightly larger than WIN_W x WIN_H)
@@ -131,6 +131,7 @@ def open_save_slots(mode: str, origin: str):
     _save_slot_origin = origin
     save_slot_screen.open(mode)
     current_screen = SCREEN_SAVE_SLOT
+
 
 #  Global key handler (T / M always active)
 
@@ -304,13 +305,13 @@ def main():
             elif paused:
                 draw_pause(PANEL)
         elif current_screen == SCREEN_LEADERBOARD:
-            leader_screen.draw(load_leaderboard())
+            leader_screen.draw()
         elif current_screen == SCREEN_STATS:
             stats_screen.draw(load_stats())
         elif current_screen == SCREEN_SAVE_SLOT:
             save_slot_screen.draw()
 
-        # panel to display (with shake if in-game)
+        # blit panel to display (with shake if in-game)
         ox, oy = (shake_sys.update() if current_screen == SCREEN_GAME else (0, 0))
         _blit_panel(ox, oy)
 

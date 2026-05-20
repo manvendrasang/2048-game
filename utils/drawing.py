@@ -3,22 +3,39 @@ import constants as C
 
 _fonts: dict = {}
 
+# Priority list: first available font is used
+# On Windows: segoeui / calibri; on Mac: .sfnsdisplay / helvetica;
+# on Linux: liberationsans / dejavusans / freesans.
+_SOFT_FONTS = [
+    "segoeui", "calibri", "sfnsdisplay", "helveticaneue", "helvetica",
+    "arial", "liberationsans", "dejavusans", "freesans", "verdana",
+]
+
+def _best_font(size: int, bold: bool = False) -> pygame.font.Font:
+    """Return the first available soft font, fallback to pygame default."""
+    avail = set(pygame.font.get_fonts())
+    for name in _SOFT_FONTS:
+        if name.replace(" ", "") in avail:
+            return pygame.font.SysFont(name, size, bold=bold)
+    return pygame.font.SysFont(None, size, bold=bold)
+
 
 def init_fonts():
     global _fonts
     _fonts = {
-        "title":    pygame.font.SysFont("consolas", 42, bold=True),
-        "tile_lg":  pygame.font.SysFont("consolas", 36, bold=True),
-        "tile_md":  pygame.font.SysFont("consolas", 26, bold=True),
-        "tile_sm":  pygame.font.SysFont("consolas", 18, bold=True),
-        "hud":      pygame.font.SysFont("consolas", 20, bold=True),
-        "small":    pygame.font.SysFont("consolas", 15),
-        "over":     pygame.font.SysFont("consolas", 48, bold=True),
-        "hint":     pygame.font.SysFont("consolas", 13),
-        "menu_big": pygame.font.SysFont("consolas", 32, bold=True),
-        "menu_med": pygame.font.SysFont("consolas", 22, bold=True),
-        "label":    pygame.font.SysFont("consolas", 17),
-        "timer":    pygame.font.SysFont("consolas", 28, bold=True),
+        "title":    _best_font(44, bold=True),
+        "tile_lg":  _best_font(36, bold=True),
+        "tile_md":  _best_font(28, bold=True),
+        "tile_sm":  _best_font(19, bold=True),
+        "hud":      _best_font(20, bold=True),
+        "small":    _best_font(15),
+        "over":     _best_font(50, bold=True),
+        "hint":     _best_font(13),
+        "menu_big": _best_font(34, bold=True),
+        "menu_med": _best_font(22, bold=True),
+        "label":    _best_font(17),
+        "timer":    _best_font(28, bold=True),
+        "tab":      _best_font(16, bold=True),
     }
 
 
@@ -60,7 +77,6 @@ class Button:
         self._hovered = self.rect.collidepoint(panel_pos)
 
     def is_clicked(self, event) -> bool:
-        """event.pos is in display coords; we translate to panel coords."""
         if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
             return False
         px = event.pos[0] - C.PANEL_OX

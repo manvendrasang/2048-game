@@ -12,7 +12,7 @@ MAX_LEADERS  = 5
 MAX_SLOTS    = 10
 
 
-# Best score 
+# Best score
 
 def load_best() -> int:
     try:
@@ -30,7 +30,7 @@ def save_best(score: int):
         pass
 
 
-#  Leaderboard 
+# Leaderboard
 
 def load_leaderboard() -> list:
     try:
@@ -48,6 +48,14 @@ def save_leaderboard(entries: list):
         pass
 
 
+def load_leaderboard_by_mode(mode: str | None) -> list:
+    """Return top-5 entries filtered by mode. None = all modes."""
+    entries = load_leaderboard()
+    if mode is None:
+        return entries
+    return [e for e in entries if e.get("mode") == mode][:MAX_LEADERS]
+
+
 def add_leaderboard_entry(score: int, mode: str, extra: str = ""):
     entries = load_leaderboard()
     entry = {
@@ -63,7 +71,7 @@ def add_leaderboard_entry(score: int, mode: str, extra: str = ""):
     return entries
 
 
-#  Stats 
+# Stats
 
 def load_stats() -> dict:
     defaults = {"games_played": 0, "total_score": 0,
@@ -96,7 +104,7 @@ def record_game(score: int, highest_tile: int, moves: int):
     save_stats(stats)
 
 
-#  10-slot save system 
+# 10-slot save system
 
 def _load_saves() -> list:
     """Return list of MAX_SLOTS dicts (None-like empty slots have 'empty': True)."""
@@ -161,7 +169,7 @@ def delete_slot(slot: int):
     _write_saves(slots)
 
 
-# Legacy single-file load (migration) 
+# Legacy single-file load (migration)
 # If old savedata.json exists, offer it as slot-0 on first run.
 _LEGACY_SAVE = os.path.join(DATA_DIR, "savedata.json")
 
