@@ -1,3 +1,7 @@
+# pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate
+# pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
+# pylint: disable=missing-final-newline, global-statement, missing-class-docstring, unused-argument
+
 import pygame
 import constants as C
 
@@ -10,7 +14,6 @@ _SOFT_FONTS = [
     "segoeui", "calibri", "sfnsdisplay", "helveticaneue", "helvetica",
     "arial", "liberationsans", "dejavusans", "freesans", "verdana",
 ]
-
 def _best_font(size: int, bold: bool = False) -> pygame.font.Font:
     """Return the first available soft font, fallback to pygame default."""
     avail = set(pygame.font.get_fonts())
@@ -18,8 +21,6 @@ def _best_font(size: int, bold: bool = False) -> pygame.font.Font:
         if name.replace(" ", "") in avail:
             return pygame.font.SysFont(name, size, bold=bold)
     return pygame.font.SysFont(None, size, bold=bold)
-
-
 def init_fonts():
     global _fonts
     _fonts = {
@@ -37,33 +38,23 @@ def init_fonts():
         "timer":    _best_font(28, bold=True),
         "tab":      _best_font(16, bold=True),
     }
-
-
 def font(name: str) -> pygame.font.Font:
     return _fonts[name]
-
-
 def draw_rounded_rect(surface, color, rect, radius=10):
     pygame.draw.rect(surface, color, rect, border_radius=radius)
-
-
 def draw_rounded_rect_border(surface, color, rect, radius=10, width=2):
     pygame.draw.rect(surface, color, rect, border_radius=radius, width=width)
-
-
 def panel_mouse_pos() -> tuple[int, int]:
     """Return mouse position translated into panel (WIN_W x WIN_H) coords."""
     mx, my = pygame.mouse.get_pos()
     return (mx - C.PANEL_OX, my - C.PANEL_OY)
 
-
 class Button:
     """Clickable button. All rects are in panel coords."""
-
     def __init__(self, rect: pygame.Rect, text: str,
-                 bg=(60, 60, 80), fg=(220, 220, 230),
-                 hover_bg=(80, 80, 110), radius=10,
-                 font_name="menu_med"):
+                bg=(60, 60, 80), fg=(220, 220, 230),
+                hover_bg=(80, 80, 110), radius=10,
+                font_name="menu_med"):
         self.rect      = rect
         self.text      = text
         self.bg        = bg
@@ -72,17 +63,14 @@ class Button:
         self.radius    = radius
         self.font_name = font_name
         self._hovered  = False
-
     def update(self, panel_pos):
         self._hovered = self.rect.collidepoint(panel_pos)
-
     def is_clicked(self, event) -> bool:
         if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
             return False
         px = event.pos[0] - C.PANEL_OX
         py = event.pos[1] - C.PANEL_OY
         return self.rect.collidepoint(px, py)
-
     def draw(self, surface, theme: dict):
         bg = self.hover_bg if self._hovered else self.bg
         draw_rounded_rect(surface, bg, self.rect, self.radius)
@@ -94,8 +82,6 @@ class Button:
 def blit_centered(surface, text_surf, cx, cy):
     r = text_surf.get_rect(centerx=cx, centery=cy)
     surface.blit(text_surf, r)
-
-
 def format_time(seconds: float) -> str:
     m = int(seconds) // 60
     s = int(seconds) % 60

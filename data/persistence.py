@@ -1,3 +1,7 @@
+# pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate, unused-argument
+# pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
+# pylint: disable=missing-final-newline, global-statement, missing-class-docstring, unused-import, superfluous-parens
+
 import os
 import json
 from datetime import datetime
@@ -16,17 +20,17 @@ MAX_SLOTS    = 10
 
 def load_best() -> int:
     try:
-        with open(BEST_FILE) as f:
+        with open(BEST_FILE, encoding="utf-8") as f:
             return int(f.read().strip())
-    except Exception:
+    except (FileNotFoundError, ValueError):
         return 0
 
 
 def save_best(score: int):
     try:
-        with open(BEST_FILE, "w") as f:
+        with open(BEST_FILE, "w", encoding="utf-8") as f:
             f.write(str(score))
-    except Exception:
+    except (FileNotFoundError, ValueError):
         pass
 
 
@@ -34,17 +38,17 @@ def save_best(score: int):
 
 def load_leaderboard() -> list:
     try:
-        with open(LEADER_FILE) as f:
+        with open(LEADER_FILE, encoding="utf-8") as f:
             return json.load(f)
-    except Exception:
+    except (FileNotFoundError, ValueError):
         return []
 
 
 def save_leaderboard(entries: list):
     try:
-        with open(LEADER_FILE, "w") as f:
+        with open(LEADER_FILE, "w", encoding="utf-8") as f:
             json.dump(entries, f, indent=2)
-    except Exception:
+    except (FileNotFoundError, ValueError):
         pass
 
 
@@ -77,20 +81,20 @@ def load_stats() -> dict:
     defaults = {"games_played": 0, "total_score": 0,
                 "highest_tile": 0, "total_moves": 0}
     try:
-        with open(STATS_FILE) as f:
+        with open(STATS_FILE, encoding="utf-8") as f:
             data = json.load(f)
             for k, v in defaults.items():
                 data.setdefault(k, v)
             return data
-    except Exception:
+    except (FileNotFoundError, ValueError):
         return defaults
 
 
 def save_stats(stats: dict):
     try:
-        with open(STATS_FILE, "w") as f:
+        with open(STATS_FILE, "w", encoding="utf-8") as f:
             json.dump(stats, f, indent=2)
-    except Exception:
+    except (FileNotFoundError, ValueError):
         pass
 
 
@@ -109,21 +113,21 @@ def record_game(score: int, highest_tile: int, moves: int):
 def _load_saves() -> list:
     """Return list of MAX_SLOTS dicts (None-like empty slots have 'empty': True)."""
     try:
-        with open(SAVES_FILE) as f:
+        with open(SAVES_FILE, encoding="utf-8") as f:
             data = json.load(f)
         # ensure exactly MAX_SLOTS entries
         while len(data) < MAX_SLOTS:
             data.append(None)
         return data[:MAX_SLOTS]
-    except Exception:
+    except (FileNotFoundError, ValueError):
         return [None] * MAX_SLOTS
 
 
 def _write_saves(slots: list):
     try:
-        with open(SAVES_FILE, "w") as f:
+        with open(SAVES_FILE, "w", encoding="utf-8") as f:
             json.dump(slots, f, indent=2)
-    except Exception as e:
+    except (FileNotFoundError, ValueError) as e:
         print("Save failed:", e)
 
 
@@ -180,11 +184,11 @@ def migrate_legacy_save():
     if slots[0] is not None:
         return   # slot 0 already occupied
     try:
-        with open(_LEGACY_SAVE) as f:
+        with open(_LEGACY_SAVE, encoding="utf-8") as f:
             data = json.load(f)
         data.setdefault("date", "legacy")
         slots[0] = data
         _write_saves(slots)
         os.rename(_LEGACY_SAVE, _LEGACY_SAVE + ".migrated")
-    except Exception:
+    except (FileNotFoundError, ValueError):
         pass

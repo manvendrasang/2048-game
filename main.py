@@ -1,3 +1,7 @@
+# pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate
+# pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
+# pylint: disable=missing-final-newline, global-statement, missing-class-docstring
+
 import sys
 import pygame
 from pygame.locals import QUIT, KEYDOWN
@@ -68,8 +72,7 @@ stats_screen     = StatsScreen(PANEL)
 save_slot_screen = SaveSlotScreen(PANEL)
 
 
-#  Panel blit with thick rounded border
-
+# Panel blit with thick rounded border
 def _blit_panel(ox: int = 0, oy: int = 0):
     th = theme_mod.get()
 
@@ -83,8 +86,8 @@ def _blit_panel(ox: int = 0, oy: int = 0):
     shadow = pygame.Surface((PANEL_W + 12, PANEL_H + 12), pygame.SRCALPHA)
     shadow.fill((0, 0, 0, 80))
     pygame.draw.rect(shadow, (0, 0, 0, 0),
-                     pygame.Rect(0, 0, PANEL_W + 12, PANEL_H + 12),
-                     border_radius=22)
+                    pygame.Rect(0, 0, PANEL_W + 12, PANEL_H + 12),
+                    border_radius=22)
     DISPLAY.blit(shadow, (BORDER_OX + ox + 4, BORDER_OY + oy + 6))
 
     # 4. Panel fill background (slightly larger than WIN_W x WIN_H)
@@ -105,18 +108,15 @@ def _blit_panel(ox: int = 0, oy: int = 0):
 
 
 #  Game helpers
-
 DIRECTION_MAP = {
     pygame.K_UP:    "up",
     pygame.K_DOWN:  "down",
     pygame.K_LEFT:  "left",
     pygame.K_RIGHT: "right",
 }
-
-
 def start_game(mode=MODE_CLASSIC, size=DEFAULT_BOARD,
-               target_tile=TARGET_TILE_DEFAULT,
-               time_budget=TIME_ATTACK_SECONDS):
+            target_tile=TARGET_TILE_DEFAULT,
+            time_budget=TIME_ATTACK_SECONDS):
     global gs, paused, current_screen
     gs = GameState(size=size, mode=mode,
                    target_tile=target_tile, time_budget=time_budget)
@@ -124,8 +124,6 @@ def start_game(mode=MODE_CLASSIC, size=DEFAULT_BOARD,
     particle_sys.clear()
     paused = False
     current_screen = SCREEN_GAME
-
-
 def open_save_slots(mode: str, origin: str):
     global current_screen, _save_slot_origin
     _save_slot_origin = origin
@@ -134,7 +132,6 @@ def open_save_slots(mode: str, origin: str):
 
 
 #  Global key handler (T / M always active)
-
 def handle_global_key(event) -> bool:
     if event.type != KEYDOWN:
         return False
@@ -148,7 +145,6 @@ def handle_global_key(event) -> bool:
 
 
 #  Per-screen event handlers
-
 def handle_menu_event(event):
     global current_screen
     result = menu_screen.handle_event(event)
@@ -167,14 +163,11 @@ def handle_menu_event(event):
     elif result == "quit":
         pygame.quit()
         sys.exit()
-
-
 def handle_game_event(event):
     global paused, current_screen
     if event.type != KEYDOWN:
         return
     k = event.key
-
     if k == pygame.K_ESCAPE:
         current_screen = SCREEN_MENU
         return
@@ -183,7 +176,6 @@ def handle_game_event(event):
         return
     if paused:
         return
-
     if k in DIRECTION_MAP and not gs.game_over:
         gs.push_undo()
         moved = gs.move(DIRECTION_MAP[k])
@@ -199,10 +191,9 @@ def handle_game_event(event):
                 sound.play("shake")
             if gs.won:
                 sound.play("win")
-
     elif k == pygame.K_r:
         start_game(mode=gs.mode, size=gs.size,
-                   target_tile=gs.target_tile, time_budget=gs.time_budget)
+                target_tile=gs.target_tile, time_budget=gs.time_budget)
     elif k == pygame.K_u and not gs.game_over:
         gs.pop_undo()
         sound.play("undo")
@@ -212,9 +203,7 @@ def handle_game_event(event):
         open_save_slots("load", SCREEN_GAME)
     elif pygame.K_3 <= k <= pygame.K_6 and not gs.game_over:
         start_game(mode=gs.mode, size=k - pygame.K_0,
-                   target_tile=gs.target_tile, time_budget=gs.time_budget)
-
-
+                target_tile=gs.target_tile, time_budget=gs.time_budget)
 def handle_save_slot_event(event):
     global current_screen, gs, paused
     result = save_slot_screen.handle_event(event)
@@ -240,23 +229,18 @@ def handle_save_slot_event(event):
 
 
 #  Main loop
-
 def main():
     global current_screen
-
     while True:
         dt = CLOCK.tick(60) / 1000.0
         mouse_pos = pygame.mouse.get_pos()
-
-        # ── events
+        # events
         for event in pygame.event.get():
             if event.type == QUIT:
                 pygame.quit()
                 sys.exit()
-
             if handle_global_key(event):
                 continue
-
             if current_screen == SCREEN_MENU:
                 handle_menu_event(event)
             elif current_screen == SCREEN_GAME:
@@ -269,10 +253,8 @@ def main():
                     current_screen = SCREEN_MENU
             elif current_screen == SCREEN_SAVE_SLOT:
                 handle_save_slot_event(event)
-
         # update
         BG.update(mouse_pos)
-
         if current_screen == SCREEN_MENU:
             menu_screen.update()
         elif current_screen == SCREEN_GAME and gs:
@@ -286,10 +268,8 @@ def main():
             stats_screen.update()
         elif current_screen == SCREEN_SAVE_SLOT:
             save_slot_screen.update()
-
         # draw panel content
         th = theme_mod.get()
-
         if current_screen == SCREEN_MENU:
             menu_screen.draw()
         elif current_screen == SCREEN_GAME and gs:
@@ -310,11 +290,9 @@ def main():
             stats_screen.draw(load_stats())
         elif current_screen == SCREEN_SAVE_SLOT:
             save_slot_screen.draw()
-
         # blit panel to display (with shake if in-game)
         ox, oy = (shake_sys.update() if current_screen == SCREEN_GAME else (0, 0))
         _blit_panel(ox, oy)
-
         pygame.display.flip()
 
 

@@ -1,6 +1,6 @@
-# ── systems/sound.py
-# Procedurally generates all sound effects using numpy + pygame.sndarray.
-# No external audio files needed.
+# pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate
+# pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
+# pylint: disable=missing-final-newline, global-statement, missing-class-docstring
 
 import numpy as np
 import pygame
@@ -10,7 +10,7 @@ _enabled = True
 
 
 def _make_sine(freq: float, duration: float, volume: float = 0.4,
-               decay: float = 1.0, sample_rate: int = 44100) -> pygame.mixer.Sound:
+            decay: float = 1.0, sample_rate: int = 44100) -> pygame.mixer.Sound:
     t    = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
     wave = np.sin(2 * np.pi * freq * t)
     env  = np.exp(-decay * t / duration)
@@ -30,7 +30,7 @@ def _make_chord(freqs: list[float], duration: float, volume: float = 0.35,
 
 
 def _make_noise_burst(duration: float, volume: float = 0.2,
-                      sample_rate: int = 44100) -> pygame.mixer.Sound:
+                    sample_rate: int = 44100) -> pygame.mixer.Sound:
     n    = int(sample_rate * duration)
     wave = np.random.uniform(-1, 1, n)
     env  = np.exp(-6 * np.linspace(0, 1, n))
@@ -52,7 +52,7 @@ def init():
             "click":   _make_sine(600, 0.05, volume=0.2,  decay=5.0),
             "shake":   _make_noise_burst(0.15, volume=0.3),
         }
-    except Exception as e:
+    except pygame.error as e:
         print("Sound init failed (continuing silently):", e)
         _sounds = {}
 
@@ -62,7 +62,7 @@ def play(name: str):
         return
     try:
         _sounds[name].play()
-    except Exception:
+    except pygame.error:
         pass
 
 

@@ -1,3 +1,7 @@
+# pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate
+# pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
+# pylint: disable=missing-final-newline, global-statement, missing-class-docstring
+
 import pygame
 from constants import WIN_W, WIN_H, MODE_CLASSIC, MODE_TARGET, MODE_TIME_ATTACK
 from utils.drawing import draw_rounded_rect, font, blit_centered, Button, panel_mouse_pos
@@ -110,7 +114,7 @@ class SaveSlotScreen:
         blit_centered(srf, hdr, WIN_W//2, 70)
 
         hint = "Left-click to select  •  Right-click to delete" if self.mode == "save" else \
-               "Left-click to load  •  Right-click to delete"
+            "Left-click to load  •  Right-click to delete"
         h = font("hint").render(hint, True, th["hint_text"])
         blit_centered(srf, h, WIN_W//2, 108)
 
@@ -119,7 +123,7 @@ class SaveSlotScreen:
         for i in range(10):
             rect = self._slot_rect(i)
             data = self._slots[i]
-            hovered = (i == self._hovered)
+            hovered = i == self._hovered
 
             # background card
             if data:

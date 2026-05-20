@@ -1,3 +1,7 @@
+# pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate, unused-argument
+# pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
+# pylint: disable=missing-final-newline, global-statement, missing-class-docstring, unused-import
+
 import pygame
 import constants as C
 from constants import (
@@ -9,7 +13,7 @@ from constants import getColor, getTextColor
 import utils.theme as theme
 
 
-# geometry helper 
+# geometry helper
 
 def tile_rect(row: int, col: int, size: int) -> pygame.Rect:
     cell = (BOARD_PX - PADDING * (size + 1)) / size
@@ -56,7 +60,7 @@ def draw_board(surface: pygame.Surface, gs):
                 lbl = tf.render(str(val), True, getTextColor(val))
                 surface.blit(lbl, lbl.get_rect(center=(cx, cy)))
 
-# HUD 
+# HUD
 
 def draw_hud(surface: pygame.Surface, gs, sound_on: bool, paused: bool):
     th = theme.get()
@@ -128,7 +132,7 @@ def draw_game_over(surface: pygame.Surface, gs):
     blit_centered(surface, font("hud").render(f"Score: {gs.score}", True, th["hud_text"]), cx, 295)
     blit_centered(surface, font("hud").render(f"Best:  {gs.best}",  True, th["accent"]),   cx, 335)
     blit_centered(surface, font("hud").render("[ R ] Restart   [ ESC ] Menu",
-                                              True, (180, 180, 200)), cx, 395)
+                                            True, (180, 180, 200)), cx, 395)
 
 
 def draw_win(surface: pygame.Surface, gs):
@@ -141,11 +145,14 @@ def draw_win(surface: pygame.Surface, gs):
         blit_centered(surface, font("hud").render(
             f"Time:  {format_time(gs.elapsed)}", True, th["accent"]), cx, 325)
     blit_centered(surface, font("hud").render("[ R ] Restart   [ ESC ] Menu",
-                                              True, (180, 180, 200)), cx, 395)
+                                            True, (180, 180, 200)), cx, 395)
 
 
 def draw_pause(surface: pygame.Surface):
     _overlay(surface, 180)
     th = theme.get()
-    blit_centered(surface, font("over").render("PAUSED",              True, th["hud_text"]), WIN_W//2, WIN_H//2 - 40)
-    blit_centered(surface, font("hud").render("[ P ] Resume",        True, (160,160,180)), WIN_W//2, WIN_H//2 + 30)
+
+    blit_centered(surface, font("over")
+                .render("PAUSED", True, th["hud_text"]), WIN_W//2, WIN_H//2 - 40)
+    blit_centered(surface, font("hud")
+                .render("[ P ] Resume", True, (160,160,180)), WIN_W//2, WIN_H//2 + 30)

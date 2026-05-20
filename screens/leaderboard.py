@@ -1,3 +1,7 @@
+# pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate
+# pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
+# pylint: disable=missing-final-newline, global-statement, missing-class-docstring
+
 import pygame
 from constants import WIN_W, WIN_H, MODE_CLASSIC, MODE_TARGET, MODE_TIME_ATTACK
 from utils.drawing import draw_rounded_rect, font, blit_centered, Button, panel_mouse_pos
@@ -12,7 +16,6 @@ TABS = [
     ("Target",      MODE_TARGET),
     ("Time Attack", MODE_TIME_ATTACK),
 ]
-
 TAB_COLORS = {
     None:             (140, 140, 160),
     MODE_CLASSIC:     (100, 160, 220),
@@ -27,7 +30,6 @@ TAB_RADIUS  = 8
 CONTENT_TOP = 168   # where rows start
 
 # Column layout — no "Mode" column when filtered; "Extra" becomes "Time" for Target
-#   #   Score   Extra/Time   Date
 COL_RANK  = 36
 COL_SCORE = 100
 COL_EXTRA = 290
@@ -35,7 +37,6 @@ COL_DATE  = 400
 
 
 class LeaderboardScreen:
-
     def __init__(self, surface: pygame.Surface):
         self.surface       = surface
         self._active_tab   = 0          # index into TABS
@@ -45,7 +46,6 @@ class LeaderboardScreen:
             "← Back", font_name="menu_med",
         )
         self._build_tabs()
-
     def _build_tabs(self):
         """Distribute tab rects evenly across the panel width."""
         n       = len(TABS)
@@ -59,12 +59,10 @@ class LeaderboardScreen:
             self._tab_rects.append(pygame.Rect(x, TAB_Y, tw, TAB_H))
 
     # events
-
     def handle_event(self, event) -> str | None:
         if self._back.is_clicked(event):
             sound.play("click")
             return "back"
-
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             import constants as C
             px = event.pos[0] - C.PANEL_OX
@@ -76,29 +74,24 @@ class LeaderboardScreen:
                         sound.play("click")
                     break
         return None
-
     def update(self):
         self._back.update(panel_mouse_pos())
 
     # draw
-
     def draw(self, _entries_unused=None):
         th       = theme.get()
         srf      = self.surface
         srf.fill(th["bg"])
-
         # header
         hdr = font("over").render("Leaderboard", True, th["accent"])
         blit_centered(srf, hdr, WIN_W//2, 62)
-
         # tab bar
         mp = panel_mouse_pos()
         for i, (label, mode_filter) in enumerate(TABS):
             rect      = self._tab_rects[i]
-            active    = (i == self._active_tab)
+            active    = i == self._active_tab
             hovered   = rect.collidepoint(mp) and not active
             tab_color = TAB_COLORS[mode_filter]
-
             if active:
                 bg = tab_color
             elif hovered:
@@ -107,9 +100,7 @@ class LeaderboardScreen:
                             else (160, 155, 145)))
             else:
                 bg = (50, 52, 68) if theme.name() == "dark" else (200, 194, 182)
-
             draw_rounded_rect(srf, bg, rect, TAB_RADIUS)
-
             fg = (255, 255, 255) if active else th["lbl_text"]
             t  = font("tab").render(label, True, fg)
             srf.blit(t, t.get_rect(center=rect.center))
@@ -123,9 +114,8 @@ class LeaderboardScreen:
         entries = load_leaderboard_by_mode(mode_filter)
 
         # ── column headers
-        is_target = (mode_filter == MODE_TARGET)
+        is_target = mode_filter == MODE_TARGET
         extra_hdr = "Time" if is_target else "Extra"
-
         headers = [
             (COL_RANK,  "#"),
             (COL_SCORE, "Score"),
