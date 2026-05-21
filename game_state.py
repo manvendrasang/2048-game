@@ -24,7 +24,6 @@ class GameState:
         self.target_tile  = target_tile
         self.time_budget  = time_budget
         self.elapsed      = 0.0
-
         self.matrix       = [[0]*size for _ in range(size)]
         self.score        = 0
         self.best         = load_best()
@@ -33,7 +32,6 @@ class GameState:
         self.won          = False
         self.win_shown    = False
         self.undo_stack   = []
-
         self.tile_scales  = [[1.0]*size for _ in range(size)]
         self.score_popups = []
         self.merge_events = []
@@ -155,7 +153,7 @@ class GameState:
             if not self.won:
                 ht = self.highest_tile()
                 if (self.mode == MODE_TARGET and ht >= self.target_tile) or \
-                    (self.mode == MODE_CLASSIC and ht >= 2048):
+                (self.mode == MODE_CLASSIC and ht >= 2048):
                     self.won       = True
                     self.game_over = True
                     self._finish_game()
@@ -174,7 +172,8 @@ class GameState:
             m = int(self.elapsed) // 60
             s = int(self.elapsed) % 60
             extra = f"{m:02d}:{s:02d}"
-        add_leaderboard_entry(self.score, self.mode, extra)
+        add_leaderboard_entry(self.score, self.mode, extra,
+                            board_size=self.size)
     def can_move(self) -> bool:
         n = self.size
         for r in range(n):

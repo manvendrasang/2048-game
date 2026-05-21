@@ -15,17 +15,13 @@ BEST_FILE    = os.path.join(DATA_DIR, "best.txt")
 MAX_LEADERS  = 5
 MAX_SLOTS    = 10
 
-
 # Best score
-
 def load_best() -> int:
     try:
         with open(BEST_FILE, encoding="utf-8") as f:
             return int(f.read().strip())
     except (FileNotFoundError, ValueError):
         return 0
-
-
 def save_best(score: int):
     try:
         with open(BEST_FILE, "w", encoding="utf-8") as f:
@@ -33,40 +29,40 @@ def save_best(score: int):
     except (FileNotFoundError, ValueError):
         pass
 
-
-# Leaderboard
-
+#  Leaderboard
 def load_leaderboard() -> list:
     try:
         with open(LEADER_FILE, encoding="utf-8") as f:
-            return json.load(f)
+            entries = json.load(f)
+        # back-fill missing fields so old saves never crash
+        for e in entries:
+            e.setdefault("board_size", 4)
+            e.setdefault("extra", "")
+            e.setdefault("date", "")
+        return entries
     except (FileNotFoundError, ValueError):
         return []
-
-
 def save_leaderboard(entries: list):
     try:
         with open(LEADER_FILE, "w", encoding="utf-8") as f:
             json.dump(entries, f, indent=2)
     except (FileNotFoundError, ValueError):
         pass
-
-
 def load_leaderboard_by_mode(mode: str | None) -> list:
     """Return top-5 entries filtered by mode. None = all modes."""
     entries = load_leaderboard()
     if mode is None:
         return entries
     return [e for e in entries if e.get("mode") == mode][:MAX_LEADERS]
-
-
-def add_leaderboard_entry(score: int, mode: str, extra: str = ""):
+def add_leaderboard_entry(score: int, mode: str, extra: str = "",
+                        board_size: int = 4):
     entries = load_leaderboard()
     entry = {
-        "score": score,
-        "mode":  mode,
-        "extra": extra,
-        "date":  datetime.now().strftime("%m/%d %H:%M"),   # short format
+        "score":      score,
+        "mode":       mode,
+        "extra":      extra,
+        "board_size": board_size,
+        "date":       datetime.now().strftime("%m/%d %H:%M"),
     }
     entries.append(entry)
     entries.sort(key=lambda e: e["score"], reverse=True)
@@ -74,9 +70,7 @@ def add_leaderboard_entry(score: int, mode: str, extra: str = ""):
     save_leaderboard(entries)
     return entries
 
-
-# Stats
-
+#  Stats
 def load_stats() -> dict:
     defaults = {"games_played": 0, "total_score": 0,
                 "highest_tile": 0, "total_moves": 0}
@@ -88,16 +82,12 @@ def load_stats() -> dict:
             return data
     except (FileNotFoundError, ValueError):
         return defaults
-
-
 def save_stats(stats: dict):
     try:
         with open(STATS_FILE, "w", encoding="utf-8") as f:
             json.dump(stats, f, indent=2)
     except (FileNotFoundError, ValueError):
         pass
-
-
 def record_game(score: int, highest_tile: int, moves: int):
     stats = load_stats()
     stats["games_played"]  += 1
@@ -108,8 +98,7 @@ def record_game(score: int, highest_tile: int, moves: int):
     save_stats(stats)
 
 
-# 10-slot save system
-
+#  10-slot save system
 def _load_saves() -> list:
     """Return list of MAX_SLOTS dicts (None-like empty slots have 'empty': True)."""
     try:
@@ -121,23 +110,17 @@ def _load_saves() -> list:
         return data[:MAX_SLOTS]
     except (FileNotFoundError, ValueError):
         return [None] * MAX_SLOTS
-
-
 def _write_saves(slots: list):
     try:
         with open(SAVES_FILE, "w", encoding="utf-8") as f:
             json.dump(slots, f, indent=2)
     except (FileNotFoundError, ValueError) as e:
         print("Save failed:", e)
-
-
 def get_save_slots() -> list:
     """Return list of MAX_SLOTS items. Empty slots are None."""
     return _load_saves()
-
-
 def save_to_slot(slot: int, matrix, size, score, moves,
-                 mode, elapsed, target_tile) -> bool:
+                mode, elapsed, target_tile) -> bool:
     """Save game state into slot (0-indexed). Overwrites if occupied."""
     if not (0 <= slot < MAX_SLOTS):
         return False
@@ -154,16 +137,12 @@ def save_to_slot(slot: int, matrix, size, score, moves,
     }
     _write_saves(slots)
     return True
-
-
 def load_from_slot(slot: int) -> dict | None:
     """Load game state from slot (0-indexed). Returns None if empty."""
     if not (0 <= slot < MAX_SLOTS):
         return None
     slots = _load_saves()
     return slots[slot]
-
-
 def delete_slot(slot: int):
     """Clear a save slot."""
     if not (0 <= slot < MAX_SLOTS):
@@ -173,10 +152,9 @@ def delete_slot(slot: int):
     _write_saves(slots)
 
 
-# Legacy single-file load (migration)
+#  Legacy single-file load (migration)
 # If old savedata.json exists, offer it as slot-0 on first run.
 _LEGACY_SAVE = os.path.join(DATA_DIR, "savedata.json")
-
 def migrate_legacy_save():
     if not os.path.exists(_LEGACY_SAVE):
         return
