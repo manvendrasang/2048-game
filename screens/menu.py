@@ -44,14 +44,15 @@ class MenuScreen:
         cx = WIN_W // 2
         # main menu
         self._main_btns = _make_buttons([
-            ("New Game",    "modes"),
-            ("Challenges",  "challenges"),
-            ("Load Game",   "load"),
-            ("Leaderboard", "leaderboard"),
-            ("Stats",       "stats"),
-            ("Options",     "options"),
-            ("Quit",        "quit"),
-        ], cx, 210, w=280, h=48, gap=10)
+            ("New Game",      "modes"),
+            ("Daily Puzzle",  "daily"),
+            ("Challenges",    "challenges"),
+            ("Load Game",     "load"),
+            ("Leaderboard",   "leaderboard"),
+            ("Stats",         "stats"),
+            ("Options",       "options"),
+            ("Quit",          "quit"),
+        ], cx, 175, w=280, h=46, gap=8)
         # mode selector  (extra gap so desc text has room)
         self._mode_btns = _make_buttons([
             ("Classic Mode",      MODE_CLASSIC),
@@ -162,11 +163,26 @@ class MenuScreen:
     def _draw_main(self, srf, th):
         self._draw_header(srf, th)
         tagline = font("small").render(
-            "Classic  •  Target Mode  •  Time Attack", True, th["lbl_text"]
+            "Classic  •  Target Mode  •  Time Attack  •  Daily", True, th["lbl_text"]
         )
         blit_centered(srf, tagline, WIN_W//2, 142)
-        for btn, _ in self._main_btns:
+        from data.daily_puzzle import daily_puzzle_number
+        from data.persistence  import get_today_result
+        already_played = get_today_result() is not None
+        puzzle_num     = daily_puzzle_number()
+        for btn, action in self._main_btns:
             btn.draw(srf, th)
+            if action == "daily":
+                # badge showing puzzle number on the right side of the button
+                badge_col = (70, 150, 220) if not already_played else (80, 140, 80)
+                badge     = pygame.Rect(btn.rect.right - 52, btn.rect.top + 8,
+                                        46, 30)
+                draw_rounded_rect(srf, badge_col, badge, 8)
+                b_txt = font("hint").render(
+                    f"#{puzzle_num}" if not already_played else "Done",
+                    True, (255, 255, 255),
+                )
+                srf.blit(b_txt, b_txt.get_rect(center=badge.center))
     def _draw_modes(self, srf, th):
         self._draw_header(srf, th, "Select Game Mode")
         descs = [

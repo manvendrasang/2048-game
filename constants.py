@@ -22,7 +22,6 @@ def set_display_size(dw: int, dh: int):
     PANEL_OX  = (dw - WIN_W) // 2
     PANEL_OY  = (dh - WIN_H) // 2
 
-
 # Animation
 ANIM_SPEED     = 0.18
 
@@ -31,6 +30,7 @@ MODE_CLASSIC     = "classic"
 MODE_TARGET      = "target"
 MODE_TIME_ATTACK = "time_attack"
 MODE_CHALLENGE   = "challenge"
+MODE_DAILY       = "daily"
 TIME_ATTACK_SECONDS = 120
 TARGET_TILE_DEFAULT = 2048
 

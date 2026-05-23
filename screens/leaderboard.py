@@ -3,7 +3,7 @@
 # pylint: disable=missing-final-newline, global-statement, missing-class-docstring
 
 import pygame
-from constants import WIN_W, WIN_H, MODE_CLASSIC, MODE_TARGET, MODE_TIME_ATTACK
+from constants import WIN_W, WIN_H, MODE_CLASSIC, MODE_TARGET, MODE_TIME_ATTACK, MODE_DAILY
 from utils.drawing import draw_rounded_rect, font, blit_centered, Button, panel_mouse_pos
 import utils.theme as theme
 import systems.sound as sound
@@ -15,12 +15,14 @@ TABS = [
     ("Classic",     MODE_CLASSIC),
     ("Target",      MODE_TARGET),
     ("Time Attack", MODE_TIME_ATTACK),
+    ("Daily",       MODE_DAILY),
 ]
 TAB_COLORS = {
     None:             (120, 120, 145),
     MODE_CLASSIC:     (90,  150, 215),
     MODE_TARGET:      (70,  190, 110),
     MODE_TIME_ATTACK: (215, 130,  65),
+    MODE_DAILY:       (150,  90, 210),
 }
 
 # Podium row styles  (bg, left-accent-bar, score-text, rank-badge)
@@ -73,7 +75,6 @@ COL_GRID  = 230     # board-size column  e.g. "4×4"
 COL_EXTRA = 296     # mode pill (All tab) or extra info
 COL_DATE  = 400
 
-
 class LeaderboardScreen:
     def __init__(self, surface: pygame.Surface):
         self.surface     = surface
@@ -84,7 +85,6 @@ class LeaderboardScreen:
             "← Back", font_name="menu_med",
         )
         self._build_tabs()
-
     # tab geometry
     def _build_tabs(self):
         n       = len(TABS)
@@ -95,7 +95,6 @@ class LeaderboardScreen:
             pygame.Rect(pad + i*(tw+gap), TAB_Y, tw, TAB_H)
             for i in range(n)
         ]
-
     # events
     def handle_event(self, event) -> str | None:
         if self._back.is_clicked(event):
@@ -114,7 +113,6 @@ class LeaderboardScreen:
         return None
     def update(self):
         self._back.update(panel_mouse_pos())
-
     # draw
     def draw(self, _=None):
         th  = theme.get()
@@ -143,11 +141,9 @@ class LeaderboardScreen:
             srf.blit(t, t.get_rect(center=rect.center))
         pygame.draw.line(srf, th["divider"],
                         (28, CONTENT_TOP - 10), (WIN_W - 28, CONTENT_TOP - 10), 1)
-
         # active tab data
         _, mode_filter = TABS[self._active_tab]
         entries = load_leaderboard_by_mode(mode_filter)
-
         # column headers
         is_target = mode_filter == MODE_TARGET
         extra_hdr = "Time" if is_target else ("Mode" if mode_filter is None else "Extra")
@@ -161,7 +157,6 @@ class LeaderboardScreen:
             srf.blit(font("hint").render(h, True, th["lbl_text"]), (x, CONTENT_TOP))
         pygame.draw.line(srf, th["divider"],
                         (28, CONTENT_TOP + 18), (WIN_W - 28, CONTENT_TOP + 18), 1)
-
         # rows
         if not entries:
             msg = font("label").render(
@@ -171,13 +166,10 @@ class LeaderboardScreen:
         else:
             for i, e in enumerate(entries):
                 self._draw_row(srf, i, e, mode_filter, dark, th)
-
         self._back.draw(srf, th)
         ver = font("hint").render("2048 Enhanced Edition  v2.0", True, th["hint_text"])
         srf.blit(ver, (WIN_W//2 - ver.get_width()//2, WIN_H - 20))
-
     # single row
-
     def _draw_row(self, srf, i: int, e: dict, mode_filter, dark: bool, th: dict):
         ry  = CONTENT_TOP + 26 + i * ROW_H
         row = pygame.Rect(28, ry - 4, WIN_W - 56, ROW_H - 6)
@@ -197,7 +189,6 @@ class LeaderboardScreen:
         pygame.draw.rect(srf, bar_c, bar_rect,
                         border_top_left_radius=ROW_RADIUS,
                         border_bottom_left_radius=ROW_RADIUS)
-
         # rank badge
         if i < 3:
             p = PODIUM[i]
@@ -216,12 +207,10 @@ class LeaderboardScreen:
         # score (podium rows get coloured text + bold feel)
         sc = font("hud").render(f"{e['score']:,}", True, score_c)
         srf.blit(sc, (COL_SCORE, ry + 2))
-
         # grid size  e.g. "4×4"
         bs   = e.get("board_size", 4)
         grid = font("label").render(f"{bs}×{bs}", True, th["lbl_text"])
         srf.blit(grid, grid.get_rect(centerx=COL_GRID + 22, top=ry + 4))
-
         # extra / mode pill
         if mode_filter is None:
             # show mode pill
@@ -229,6 +218,7 @@ class LeaderboardScreen:
                 MODE_CLASSIC:     ("Classic",  (70, 120, 195)),
                 MODE_TARGET:      ("Target",   (60, 170,  90)),
                 MODE_TIME_ATTACK: ("TimeAtk",  (195, 110, 50)),
+                MODE_DAILY:       ("Daily",    (140,  80, 200)),
             }
             p_label, p_col = pill_meta.get(e.get("mode", ""), ("?", (100,100,100)))
             pill = pygame.Rect(COL_EXTRA, ry + 4, 68, 20)
@@ -239,7 +229,6 @@ class LeaderboardScreen:
             ex = e.get("extra", "") or "—"
             srf.blit(font("label").render(ex, True, th["lbl_text"]),
                     (COL_EXTRA, ry + 4))
-
         # date
         srf.blit(font("label").render(e.get("date", ""), True, th["lbl_text"]),
                 (COL_DATE, ry + 4))

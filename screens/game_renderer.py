@@ -6,12 +6,11 @@ import pygame
 import constants as C
 from constants import (
     WIN_W, WIN_H, BOARD_PX, BOARD_TOP, BOARD_LEFT, PADDING,
-    MODE_TARGET, MODE_TIME_ATTACK, MODE_CHALLENGE,
+    MODE_TARGET, MODE_TIME_ATTACK, MODE_CHALLENGE, MODE_DAILY,
 )
 from utils.drawing import draw_rounded_rect, font, blit_centered, format_time
 from constants import getColor, getTextColor
 import utils.theme as theme
-
 
 # geometry helper
 def tile_rect(row: int, col: int, size: int) -> pygame.Rect:
@@ -104,6 +103,16 @@ def draw_hud(surface: pygame.Surface, gs, sound_on: bool, paused: bool):
         # challenge name
         n_lbl = font("hint").render(ch["name"], True, th["hint_text"])
         surface.blit(n_lbl, (BOARD_LEFT, 90))
+    elif gs.mode == MODE_DAILY:
+        from data.daily_puzzle import daily_puzzle_number, daily_date_str
+        num_lbl = font("small").render(
+            f"Daily Puzzle #{daily_puzzle_number()}", True, th["accent"]
+        )
+        surface.blit(num_lbl, num_lbl.get_rect(right=WIN_W - 30, top=mode_y))
+        date_lbl = font("hint").render(daily_date_str(), True, th["lbl_text"])
+        surface.blit(date_lbl, date_lbl.get_rect(right=WIN_W - 30, top=mode_y + 22))
+        no_undo = font("hint").render("No undo in daily mode", True, th["hint_text"])
+        surface.blit(no_undo, (BOARD_LEFT, 90))
     # Hint bar
     sound_icon = "[M] Mute" if sound_on else "[M] Unmute"
     hints = f"[Arrows] Move  [U] Undo  [S] Save  [P] Pause  [T] Theme  {sound_icon}  [ESC] Menu"
@@ -119,7 +128,7 @@ def draw_score_popups(surface: pygame.Surface, gs):
         txt.set_alpha(max(0, alpha))
         surface.blit(txt, txt.get_rect(centerx=x, centery=int(y)))
 
-#  overlays
+# overlays
 def _overlay(surface, alpha=210):
     ov = pygame.Surface((WIN_W, WIN_H), pygame.SRCALPHA)
     ov.fill((18, 18, 28, alpha))

@@ -1,19 +1,22 @@
 # pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate
 # pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
-# pylint: disable=missing-final-newline, global-statement, missing-class-docstring
+# pylint: disable=missing-final-newline, global-statement, missing-class-docstring, redefined-outer-name, unused-import
 
 import sys
 import pygame
 from pygame.locals import QUIT, KEYDOWN
+
 pygame.init()
+
 import constants as C
 info = pygame.display.Info()
 DISPLAY = pygame.display.set_mode((info.current_w, info.current_h), pygame.FULLSCREEN)
 pygame.display.set_caption("2048")
 C.set_display_size(info.current_w, info.current_h)
+
 from constants import (
     WIN_W, WIN_H, DEFAULT_BOARD,
-    MODE_CLASSIC, MODE_TARGET, MODE_TIME_ATTACK, MODE_CHALLENGE,
+    MODE_CLASSIC, MODE_TARGET, MODE_TIME_ATTACK, MODE_CHALLENGE, MODE_DAILY,
     TARGET_TILE_DEFAULT, TIME_ATTACK_SECONDS,
 )
 from utils.drawing      import init_fonts
@@ -32,29 +35,34 @@ from screens.stats               import StatsScreen
 from screens.save_slot_screen    import SaveSlotScreen
 from screens.challenge_screen    import ChallengeScreen
 from screens.challenge_result_screen import ChallengeResultScreen
-from data.persistence  import load_stats, migrate_legacy_save
+from screens.daily_result_screen import DailyResultScreen
+from data.persistence  import load_stats, migrate_legacy_save, get_today_result, save_daily_result
 from data.challenges   import get_challenge
+from data.daily_puzzle import generate_daily_board
 
 CLOCK = pygame.time.Clock()
 init_fonts()
 sound.init()
 music.init()
 migrate_legacy_save()
-#  Panel surface
+
+# Panel surface
 PANEL   = pygame.Surface((WIN_W, WIN_H))
 PANEL_W = WIN_W + 20
 PANEL_H = WIN_H + 20
 BORDER_OX = C.PANEL_OX - 10
 BORDER_OY = C.PANEL_OY - 10
 BG = BgParticleSystem(info.current_w, info.current_h)
-#  Screen IDs
-S_MENU       = "menu"
-S_GAME       = "game"
-S_LEADER     = "leaderboard"
-S_STATS      = "stats"
-S_SAVE_SLOT  = "save_slot"
-S_CHALLENGES = "challenges"
-S_CH_RESULT  = "ch_result"
+
+# Screen IDs
+S_MENU        = "menu"
+S_GAME        = "game"
+S_LEADER      = "leaderboard"
+S_STATS       = "stats"
+S_SAVE_SLOT   = "save_slot"
+S_CHALLENGES  = "challenges"
+S_CH_RESULT   = "ch_result"
+S_DAILY_RESULT = "daily_result"
 current_screen     = S_MENU
 gs                 = None
 paused             = False
@@ -62,12 +70,13 @@ _save_slot_origin  = S_GAME
 _active_challenge  = None   # challenge dict for current/last challenge
 particle_sys = particles.ParticleSystem()
 shake_sys    = screenshake.ScreenShake()
-menu_screen      = MenuScreen(PANEL)
-leader_screen    = LeaderboardScreen(PANEL)
-stats_screen     = StatsScreen(PANEL)
-save_slot_screen = SaveSlotScreen(PANEL)
-challenge_screen = ChallengeScreen(PANEL)
-ch_result_screen = ChallengeResultScreen(PANEL)
+menu_screen       = MenuScreen(PANEL)
+leader_screen     = LeaderboardScreen(PANEL)
+stats_screen      = StatsScreen(PANEL)
+save_slot_screen  = SaveSlotScreen(PANEL)
+challenge_screen  = ChallengeScreen(PANEL)
+ch_result_screen  = ChallengeResultScreen(PANEL)
+daily_result_screen = DailyResultScreen(PANEL)
 DIRECTION_MAP = {
     pygame.K_UP:    "up",
     pygame.K_DOWN:  "down",
@@ -129,6 +138,23 @@ def start_challenge(cid: int):
         size=ch["board_size"],
         challenge=ch,
     )
+def start_daily():
+    """Start today's daily puzzle, or show result if already played."""
+    global gs, paused, current_screen
+    today = get_today_result()
+    if today is not None:
+        daily_result_screen.open(today, already_played=True)
+        current_screen = S_DAILY_RESULT
+        return
+    board = generate_daily_board(size=4)
+    gs    = GameState(size=4, mode=MODE_DAILY)
+    gs.reset()
+    gs.matrix     = board
+    gs.tile_scales = [[1.0]*4 for _ in range(4)]
+    particle_sys.clear()
+    paused         = False
+    current_screen = S_GAME
+    music.set_context("game")
 def open_save_slots(mode: str, origin: str):
     global current_screen, _save_slot_origin
     _save_slot_origin = origin
@@ -160,6 +186,8 @@ def handle_menu_event(event):
         start_game(mode=MODE_TARGET, target_tile=TARGET_TILE_DEFAULT)
     elif result == MODE_TIME_ATTACK:
         start_game(mode=MODE_TIME_ATTACK, time_budget=TIME_ATTACK_SECONDS)
+    elif result == "daily":
+        start_daily()
     elif result == "challenges":
         current_screen = S_CHALLENGES
     elif result == "load":
@@ -203,6 +231,9 @@ def handle_game_event(event):
             # challenge ended → show result screen
             if gs.game_over and gs.mode == MODE_CHALLENGE:
                 _show_challenge_result()
+            # daily ended → show daily result screen
+            if gs.game_over and gs.mode == MODE_DAILY:
+                _show_daily_result()
     elif k == pygame.K_r:
         if gs.mode == MODE_CHALLENGE and _active_challenge:
             start_challenge(_active_challenge["id"])
@@ -211,14 +242,15 @@ def handle_game_event(event):
                     target_tile=gs.target_tile,
                     time_budget=gs.time_budget)
     elif k == pygame.K_u and not gs.game_over:
-        gs.pop_undo()
-        sound.play("undo")
-    elif k == pygame.K_s and not gs.game_over and gs.mode != MODE_CHALLENGE:
+        if gs.mode != MODE_DAILY:
+            gs.pop_undo()
+            sound.play("undo")
+    elif k == pygame.K_s and not gs.game_over and gs.mode not in (MODE_CHALLENGE, MODE_DAILY):
         open_save_slots("save", S_GAME)
-    elif k == pygame.K_l and gs.mode != MODE_CHALLENGE:
+    elif k == pygame.K_l and gs.mode not in (MODE_CHALLENGE, MODE_DAILY):
         open_save_slots("load", S_GAME)
     elif pygame.K_3 <= k <= pygame.K_6 and not gs.game_over \
-            and gs.mode != MODE_CHALLENGE:
+            and gs.mode not in (MODE_CHALLENGE, MODE_DAILY):
         start_game(mode=gs.mode, size=k - pygame.K_0,
                 target_tile=gs.target_tile,
                 time_budget=gs.time_budget)
@@ -234,6 +266,19 @@ def _show_challenge_result():
         par_moves=ch["par_moves"] if ch else 0,
     )
     current_screen = S_CH_RESULT
+def _show_daily_result():
+    global current_screen
+    from data.persistence import get_today_result
+    result = get_today_result()
+    if result:
+        daily_result_screen.open(result, already_played=False)
+        current_screen = S_DAILY_RESULT
+def handle_daily_result_event(event):
+    global current_screen
+    result = daily_result_screen.handle_event(event)
+    if result == "menu":
+        current_screen = S_MENU
+        music.set_context("menu")
 def handle_challenge_result_event(event):
     global current_screen
     result = ch_result_screen.handle_event(event)
@@ -302,7 +347,9 @@ def main():
                     current_screen = S_MENU
             elif current_screen == S_CH_RESULT:
                 handle_challenge_result_event(event)
-        #  update
+            elif current_screen == S_DAILY_RESULT:
+                handle_daily_result_event(event)
+        # update
         BG.update(mouse_pos)
         music.tick(dt)
         if current_screen == S_MENU:
@@ -322,6 +369,8 @@ def main():
             challenge_screen.update()
         elif current_screen == S_CH_RESULT:
             ch_result_screen.update(dt)
+        elif current_screen == S_DAILY_RESULT:
+            daily_result_screen.update(dt)
         # draw panel
         th = theme_mod.get()
         if current_screen == S_MENU:
@@ -348,6 +397,8 @@ def main():
             challenge_screen.draw()
         elif current_screen == S_CH_RESULT:
             ch_result_screen.draw()
+        elif current_screen == S_DAILY_RESULT:
+            daily_result_screen.draw()
         ox, oy = shake_sys.update() if current_screen == S_GAME else (0, 0)
         _blit_panel(ox, oy)
         pygame.display.flip()

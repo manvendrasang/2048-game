@@ -6,7 +6,7 @@ import random
 import copy
 from constants import (
     DEFAULT_BOARD, WIN_W, BOARD_TOP, BOARD_PX,
-    MODE_CLASSIC, MODE_TARGET, MODE_TIME_ATTACK, MODE_CHALLENGE,
+    MODE_CLASSIC, MODE_TARGET, MODE_TIME_ATTACK, MODE_CHALLENGE, MODE_DAILY,
     TARGET_TILE_DEFAULT, TIME_ATTACK_SECONDS,
 )
 from data.persistence import (
@@ -14,7 +14,6 @@ from data.persistence import (
     save_to_slot, load_from_slot,
     add_leaderboard_entry, record_game,
 )
-
 
 class GameState:
     def __init__(self, size=DEFAULT_BOARD, mode=MODE_CLASSIC,
@@ -26,7 +25,6 @@ class GameState:
         self.target_tile  = target_tile
         self.time_budget  = time_budget
         self.elapsed      = 0.0
-
         # challenge metadata (None when not in challenge mode)
         self.challenge        = challenge          # full challenge dict
         self.challenge_failed = False
@@ -42,7 +40,7 @@ class GameState:
         self.score_popups = []
         self.merge_events = []
 
-    #  slot-based persistence
+    # slot-based persistence
     def save(self, slot: int) -> bool:
         return save_to_slot(
             slot=slot, matrix=self.matrix, size=self.size,
@@ -158,22 +156,23 @@ class GameState:
             self.place_random()
             if not self.won:
                 ht = self.highest_tile()
-                #  challenge win/fail detection
+                # challenge win/fail detection
                 if self.mode == MODE_CHALLENGE and self.challenge:
                     ch = self.challenge
                     gt = ch["goal_type"]
                     gv = ch["goal_value"]
                     ml = ch["move_limit"]
-                    # check win
                     if (gt == "tile"  and ht >= gv) or \
                     (gt == "score" and self.score >= gv):
                         self.won       = True
                         self.game_over = True
                         self._finish_challenge()
-                    # check fail (move limit exceeded)
                     elif ml > 0 and self.moves >= ml and not self.won:
                         self.challenge_failed = True
                         self.game_over        = True
+                elif self.mode == MODE_DAILY:
+                    # daily puzzle ends only when no moves remain
+                    pass
                 elif (self.mode == MODE_TARGET and ht >= self.target_tile) or \
                     (self.mode == MODE_CLASSIC and ht >= 2048):
                     self.won       = True
@@ -184,6 +183,8 @@ class GameState:
                 if self.mode == MODE_CHALLENGE:
                     self.challenge_failed = True
                     self._finish_challenge()
+                elif self.mode == MODE_DAILY:
+                    self._finish_daily()
                 else:
                     self._finish_game()
             if pts > 0:
@@ -208,8 +209,14 @@ class GameState:
             stars = 0
         from data.persistence import save_challenge_result
         save_challenge_result(ch["id"], stars, self.moves)
-        # store on self so main can read it
         self.challenge_stars = stars
+    def _finish_daily(self):
+        """Record daily puzzle result."""
+        ht = self.highest_tile()
+        record_game(self.score, ht, self.moves)
+        from data.persistence import save_daily_result
+        save_daily_result(self.score, self.moves, ht)
+        self.won = True   # daily always "completes" — score is what matters
     def _finish_game(self):
         record_game(self.score, self.highest_tile(), self.moves)
         extra = ""

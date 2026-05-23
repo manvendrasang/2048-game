@@ -96,7 +96,7 @@ def record_game(score: int, highest_tile: int, moves: int):
         stats["highest_tile"] = highest_tile
     save_stats(stats)
 
-# 10-slot save system #
+# 10-slot save system
 def _load_saves() -> list:
     """Return list of MAX_SLOTS dicts (None-like empty slots have 'empty': True)."""
     try:
@@ -118,7 +118,7 @@ def get_save_slots() -> list:
     """Return list of MAX_SLOTS items. Empty slots are None."""
     return _load_saves()
 def save_to_slot(slot: int, matrix, size, score, moves,
-                mode, elapsed, target_tile) -> bool:
+                 mode, elapsed, target_tile) -> bool:
     """Save game state into slot (0-indexed). Overwrites if occupied."""
     if not (0 <= slot < MAX_SLOTS):
         return False
@@ -149,7 +149,7 @@ def delete_slot(slot: int):
     slots[slot] = None
     _write_saves(slots)
 
-# Legacy single-file load (migration) #
+# Legacy single-file load (migration)
 # If old savedata.json exists, offer it as slot-0 on first run.
 _LEGACY_SAVE = os.path.join(DATA_DIR, "savedata.json")
 def migrate_legacy_save():
@@ -192,3 +192,51 @@ def save_challenge_result(cid: int, stars: int, moves: int):
             json.dump(prog, f, indent=2)
     except Exception:
         pass
+
+# Daily puzzle
+import os as _os
+DAILY_FILE = _os.path.join(DATA_DIR, "daily.json")
+def today_str() -> str:
+    return datetime.now().strftime("%Y-%m-%d")
+def load_daily_record() -> dict:
+    """Returns dict keyed by date string → {score, moves, completed}."""
+    try:
+        with open(DAILY_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+def save_daily_result(score: int, moves: int, highest_tile: int) -> dict:
+    """Save today's result. Returns the saved entry."""
+    records = load_daily_record()
+    date    = today_str()
+    entry   = {
+        "score":        score,
+        "moves":        moves,
+        "highest_tile": highest_tile,
+        "completed":    True,
+        "date":         date,
+    }
+    records[date] = entry
+    try:
+        with open(DAILY_FILE, "w", encoding="utf-8") as f:
+            json.dump(records, f, indent=2)
+    except Exception:
+        pass
+    return entry
+def get_today_result() -> dict | None:
+    """Returns today's result dict if already played, else None."""
+    records = load_daily_record()
+    return records.get(today_str())
+def get_daily_streak() -> int:
+    """Count consecutive days played ending today or yesterday."""
+    from datetime import date, timedelta
+    records = load_daily_record()
+    streak  = 0
+    day     = date.today()
+    while True:
+        if day.strftime("%Y-%m-%d") in records:
+            streak += 1
+            day -= timedelta(days=1)
+        else:
+            break
+    return streak
