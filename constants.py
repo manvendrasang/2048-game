@@ -30,6 +30,7 @@ ANIM_SPEED     = 0.18
 MODE_CLASSIC     = "classic"
 MODE_TARGET      = "target"
 MODE_TIME_ATTACK = "time_attack"
+MODE_CHALLENGE   = "challenge"
 TIME_ATTACK_SECONDS = 120
 TARGET_TILE_DEFAULT = 2048
 

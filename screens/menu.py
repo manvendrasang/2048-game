@@ -7,9 +7,9 @@ from constants import WIN_W, WIN_H, MODE_CLASSIC, MODE_TARGET, MODE_TIME_ATTACK
 from utils.drawing import Button, draw_rounded_rect, font, blit_centered, panel_mouse_pos
 import utils.theme as theme
 import systems.sound as sound
+import systems.music as music
 
-
-#  shared button factory
+# shared button factory
 def _make_buttons(items, cx, start_y, w=260, h=52, gap=12):
     btns = []
     for label, action in items:
@@ -18,8 +18,7 @@ def _make_buttons(items, cx, start_y, w=260, h=52, gap=12):
         start_y += h + gap
     return btns
 
-
-#  MenuScreen
+# MenuScreen
 class MenuScreen:
     """
     Possible return values from handle_event():
@@ -30,7 +29,6 @@ class MenuScreen:
         "quit"         → exit
         None           → handled internally (sub-menu navigation)
     """
-
     # sub-screen IDs
     _SUB_NONE     = None
     _SUB_MODES    = "modes"
@@ -41,51 +39,45 @@ class MenuScreen:
         self._sub    = self._SUB_NONE
         self._scroll = 0          # for controls tab scrolling (future-proof)
         self._build_all()
-
-    #  build
+    # build
     def _build_all(self):
         cx = WIN_W // 2
-
-        #  main menu
+        # main menu
         self._main_btns = _make_buttons([
             ("New Game",    "modes"),
+            ("Challenges",  "challenges"),
             ("Load Game",   "load"),
             ("Leaderboard", "leaderboard"),
             ("Stats",       "stats"),
             ("Options",     "options"),
             ("Quit",        "quit"),
-        ], cx, 240, w=280, h=50, gap=12)
-
-        #  mode selector  (extra gap so desc text has room)
+        ], cx, 210, w=280, h=48, gap=10)
+        # mode selector  (extra gap so desc text has room)
         self._mode_btns = _make_buttons([
             ("Classic Mode",      MODE_CLASSIC),
             ("Target Mode",       MODE_TARGET),
             ("Time Attack Mode",  MODE_TIME_ATTACK),
             ("← Back",            "back"),
         ], cx, 190, w=280, h=50, gap=38)
-
-        #  options menu (toggle rows built dynamically in draw)
+        # options menu (toggle rows built dynamically in draw)
         self._opt_btns = _make_buttons([
             ("Controls",  "controls"),
             ("← Back",    "back"),
-        ], cx, 460, w=240, h=46, gap=10)
-
+        ], cx, 430, w=240, h=46, gap=10)
         # toggle rects (drawn manually in options screen)
         tw, th_h = 200, 48
         self._toggle_sound_rect = pygame.Rect(cx - tw//2, 230, tw, th_h)
-        self._toggle_theme_rect = pygame.Rect(cx - tw//2, 295, tw, th_h)
-
+        self._toggle_music_rect = pygame.Rect(cx - tw//2, 295, tw, th_h)
+        self._toggle_theme_rect = pygame.Rect(cx - tw//2, 360, tw, th_h)
         # controls back button
         self._ctrl_back_btn = Button(
             pygame.Rect(cx - 120, WIN_H - 70, 240, 46),
             "← Back", font_name="menu_med"
         )
-
-    #  events
+    # events
     def handle_event(self, event) -> str | None:
         if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
             return None
-
         # translate display coords → panel coords
         import constants as C
         pos = (event.pos[0] - C.PANEL_OX, event.pos[1] - C.PANEL_OY)
@@ -111,6 +103,10 @@ class MenuScreen:
                 sound.toggle()
                 sound.play("click")
                 return None
+            if self._toggle_music_rect.collidepoint(pos):
+                music.toggle()
+                sound.play("click")
+                return None
             if self._toggle_theme_rect.collidepoint(pos):
                 theme.toggle()
                 sound.play("click")
@@ -129,8 +125,7 @@ class MenuScreen:
                 self._sub = self._SUB_OPTIONS
                 return None
         return None
-
-    #  update
+    # update
     def update(self):
         mp = panel_mouse_pos()
         if self._sub == self._SUB_NONE:
@@ -141,8 +136,7 @@ class MenuScreen:
             for btn, _ in self._opt_btns: btn.update(mp)
         elif self._sub == self._SUB_CONTROLS:
             self._ctrl_back_btn.update(mp)
-
-    #  draw
+    # draw
     def draw(self):
         th  = theme.get()
         srf = self.surface
@@ -155,11 +149,9 @@ class MenuScreen:
             self._draw_options(srf, th)
         elif self._sub == self._SUB_CONTROLS:
             self._draw_controls(srf, th)
-
         # footer on all sub-screens
         ver = font("hint").render("2048 Enhanced Edition  v2.0", True, th["hint_text"])
         srf.blit(ver, (WIN_W//2 - ver.get_width()//2, WIN_H - 20))
-
     # sub-draw helpers
     def _draw_header(self, srf, th, subtitle=""):
         title = font("over").render("2048", True, th["accent"])
@@ -191,34 +183,31 @@ class MenuScreen:
                 srf.blit(d, (btn.rect.left + 6, btn.rect.bottom + 6))
     def _draw_options(self, srf, th):
         self._draw_header(srf, th, "Options")
-
-        #  Sound toggle
+        # Sound toggle
         self._draw_toggle(
-            srf, th,
-            self._toggle_sound_rect,
-            label="Sound",
-            state=sound.is_enabled(),
-            on_text="ON",
-            off_text="OFF",
+            srf, th, self._toggle_sound_rect,
+            label="SFX", state=sound.is_enabled(),
+            on_text="ON", off_text="OFF",
         )
-
-        #  Theme toggle
+        # Music toggle
+        self._draw_toggle(
+            srf, th, self._toggle_music_rect,
+            label="Music", state=music.is_enabled(),
+            on_text="ON", off_text="OFF",
+        )
+        # Theme toggle
         is_dark = theme.name() == "dark"
         self._draw_toggle(
-            srf, th,
-            self._toggle_theme_rect,
-            label="Theme",
-            state=is_dark,
-            on_text="Dark",
-            off_text="Light",
+            srf, th, self._toggle_theme_rect,
+            label="Theme", state=is_dark,
+            on_text="Dark", off_text="Light",
         )
         pygame.draw.line(
             srf, th["divider"],
-            (WIN_W//2 - 130, 360), (WIN_W//2 + 130, 360), 1
+            (WIN_W//2 - 130, 425), (WIN_W//2 + 130, 425), 1
         )
         for btn, _ in self._opt_btns:
             btn.draw(srf, th)
-
     def _draw_toggle(self, srf, th, rect, label, state, on_text, off_text):
         """Draw a labelled toggle row."""
         # background card
@@ -226,7 +215,6 @@ class MenuScreen:
         draw_rounded_rect(srf, card_col, rect, 10)
         lbl = font("label").render(label, True, th["hud_text"])
         srf.blit(lbl, (rect.left + 16, rect.centery - lbl.get_height()//2))
-
         # pill button on the right
         pill_w, pill_h = 80, 32
         pill_x = rect.right - pill_w - 12
@@ -237,7 +225,6 @@ class MenuScreen:
         val_txt = on_text if state else off_text
         v = font("small").render(val_txt, True, (255, 255, 255))
         srf.blit(v, v.get_rect(center=pill.center))
-
     def _draw_controls(self, srf, th):
         self._draw_header(srf, th, "Controls")
         controls = [
@@ -247,7 +234,8 @@ class MenuScreen:
             ("S",             "Save game"),
             ("P",             "Pause / Resume"),
             ("T",             "Toggle Dark / Light theme"),
-            ("M",             "Mute / Unmute sound"),
+            ("M",             "Mute / Unmute SFX"),
+            ("N",             "Toggle background music"),
             ("3 – 6",         "Change board size"),
             ("ESC",           "Return to main menu"),
         ]
@@ -255,7 +243,6 @@ class MenuScreen:
         left   = WIN_W//2 - 230
         right  = WIN_W//2 + 10
         start_y = 170
-
         # column headers
         key_hdr = font("label").render("Key", True, th["accent"])
         act_hdr = font("label").render("Action", True, th["accent"])

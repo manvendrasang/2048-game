@@ -1,11 +1,12 @@
-# pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate
+# pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate, attribute-defined-outside-init
 # pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
-# pylint: disable=missing-final-newline, global-statement, missing-class-docstring
+# pylint: disable=missing-final-newline, global-statement, missing-class-docstring, unused-import
 
 import random
+import copy
 from constants import (
     DEFAULT_BOARD, WIN_W, BOARD_TOP, BOARD_PX,
-    MODE_CLASSIC, MODE_TARGET, MODE_TIME_ATTACK,
+    MODE_CLASSIC, MODE_TARGET, MODE_TIME_ATTACK, MODE_CHALLENGE,
     TARGET_TILE_DEFAULT, TIME_ATTACK_SECONDS,
 )
 from data.persistence import (
@@ -18,12 +19,17 @@ from data.persistence import (
 class GameState:
     def __init__(self, size=DEFAULT_BOARD, mode=MODE_CLASSIC,
                 target_tile=TARGET_TILE_DEFAULT,
-                time_budget=TIME_ATTACK_SECONDS):
+                time_budget=TIME_ATTACK_SECONDS,
+                challenge: dict | None = None):
         self.size         = size
         self.mode         = mode
         self.target_tile  = target_tile
         self.time_budget  = time_budget
         self.elapsed      = 0.0
+
+        # challenge metadata (None when not in challenge mode)
+        self.challenge        = challenge          # full challenge dict
+        self.challenge_failed = False
         self.matrix       = [[0]*size for _ in range(size)]
         self.score        = 0
         self.best         = load_best()
@@ -36,7 +42,7 @@ class GameState:
         self.score_popups = []
         self.merge_events = []
 
-    # slot-based persistence
+    #  slot-based persistence
     def save(self, slot: int) -> bool:
         return save_to_slot(
             slot=slot, matrix=self.matrix, size=self.size,
@@ -152,19 +158,58 @@ class GameState:
             self.place_random()
             if not self.won:
                 ht = self.highest_tile()
-                if (self.mode == MODE_TARGET and ht >= self.target_tile) or \
-                (self.mode == MODE_CLASSIC and ht >= 2048):
+                #  challenge win/fail detection
+                if self.mode == MODE_CHALLENGE and self.challenge:
+                    ch = self.challenge
+                    gt = ch["goal_type"]
+                    gv = ch["goal_value"]
+                    ml = ch["move_limit"]
+                    # check win
+                    if (gt == "tile"  and ht >= gv) or \
+                    (gt == "score" and self.score >= gv):
+                        self.won       = True
+                        self.game_over = True
+                        self._finish_challenge()
+                    # check fail (move limit exceeded)
+                    elif ml > 0 and self.moves >= ml and not self.won:
+                        self.challenge_failed = True
+                        self.game_over        = True
+                elif (self.mode == MODE_TARGET and ht >= self.target_tile) or \
+                    (self.mode == MODE_CLASSIC and ht >= 2048):
                     self.won       = True
                     self.game_over = True
                     self._finish_game()
-            if not self.can_move():
+            if not self.can_move() and not self.game_over:
                 self.game_over = True
-                self._finish_game()
+                if self.mode == MODE_CHALLENGE:
+                    self.challenge_failed = True
+                    self._finish_challenge()
+                else:
+                    self._finish_game()
             if pts > 0:
                 self.score_popups.append(
                     [WIN_W//2, BOARD_TOP + BOARD_PX//2, pts, 255, -2.0]
                 )
         return moved
+    def _finish_challenge(self):
+        """Record challenge result and compute stars."""
+        if not self.challenge:
+            return
+        ch  = self.challenge
+        par = ch["par_moves"]
+        if self.won:
+            if self.moves <= par:
+                stars = 3
+            elif self.moves <= int(par * 1.4):
+                stars = 2
+            else:
+                stars = 1
+        else:
+            stars = 0
+        from data.persistence import save_challenge_result
+        save_challenge_result(ch["id"], stars, self.moves)
+        # store on self so main can read it
+        self.challenge_stars = stars
     def _finish_game(self):
         record_game(self.score, self.highest_tile(), self.moves)
         extra = ""
@@ -185,24 +230,38 @@ class GameState:
                 if r+1 < n and self.matrix[r][c] == self.matrix[r+1][c]:
                     return True
         return False
-    def reset(self, size=None, mode=None, target_tile=None, time_budget=None):
+    def reset(self, size=None, mode=None, target_tile=None,
+            time_budget=None, challenge=None):
         if size        is not None: self.size        = size
         if mode        is not None: self.mode        = mode
         if target_tile is not None: self.target_tile = target_tile
         if time_budget is not None: self.time_budget = time_budget
-        self.matrix       = [[0]*self.size for _ in range(self.size)]
-        self.score        = 0
-        self.moves        = 0
-        self.elapsed      = 0.0
-        self.game_over    = False
-        self.won          = False
-        self.win_shown    = False
-        self.undo_stack   = []
-        self.tile_scales  = [[1.0]*self.size for _ in range(self.size)]
-        self.score_popups = []
-        self.merge_events = []
-        self.place_random()
-        self.place_random()
+        if challenge   is not None: self.challenge   = challenge
+        self.score            = 0
+        self.moves            = 0
+        self.elapsed          = 0.0
+        self.game_over        = False
+        self.won              = False
+        self.win_shown        = False
+        self.challenge_failed = False
+        self.challenge_stars  = 0
+        self.undo_stack       = []
+        self.tile_scales      = [[1.0]*self.size for _ in range(self.size)]
+        self.score_popups     = []
+        self.merge_events     = []
+        # challenge: use prescribed starting matrix or random
+        if self.mode == MODE_CHALLENGE and self.challenge and \
+                self.challenge.get("start_matrix"):
+            sm = self.challenge["start_matrix"]
+            self.size   = self.challenge["board_size"]
+            self.matrix = copy.deepcopy(sm)
+            self.tile_scales = [[1.0]*self.size for _ in range(self.size)]
+            # place one random tile on an empty cell to make it interesting
+            self.place_random()
+        else:
+            self.matrix = [[0]*self.size for _ in range(self.size)]
+            self.place_random()
+            self.place_random()
     def tick_animations(self, dt: float = 1/60):
         n = self.size
         for r in range(n):
