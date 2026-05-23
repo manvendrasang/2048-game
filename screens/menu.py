@@ -9,7 +9,6 @@ import utils.theme as theme
 import systems.sound as sound
 import systems.music as music
 
-# shared button factory
 def _make_buttons(items, cx, start_y, w=260, h=52, gap=12):
     btns = []
     for label, action in items:
@@ -18,7 +17,6 @@ def _make_buttons(items, cx, start_y, w=260, h=52, gap=12):
         start_y += h + gap
     return btns
 
-# MenuScreen
 class MenuScreen:
     """
     Possible return values from handle_event():
@@ -39,7 +37,6 @@ class MenuScreen:
         self._sub    = self._SUB_NONE
         self._scroll = 0          # for controls tab scrolling (future-proof)
         self._build_all()
-    # build
     def _build_all(self):
         cx = WIN_W // 2
         # main menu
@@ -52,30 +49,26 @@ class MenuScreen:
             ("Stats",         "stats"),
             ("Options",       "options"),
             ("Quit",          "quit"),
-        ], cx, 175, w=280, h=46, gap=8)
-        # mode selector  (extra gap so desc text has room)
+        ], cx, 210, w=300, h=52, gap=12)
         self._mode_btns = _make_buttons([
             ("Classic Mode",      MODE_CLASSIC),
             ("Target Mode",       MODE_TARGET),
             ("Time Attack Mode",  MODE_TIME_ATTACK),
             ("← Back",            "back"),
-        ], cx, 190, w=280, h=50, gap=38)
+        ], cx, 225, w=300, h=52, gap=42)
         # options menu (toggle rows built dynamically in draw)
         self._opt_btns = _make_buttons([
             ("Controls",  "controls"),
             ("← Back",    "back"),
-        ], cx, 430, w=240, h=46, gap=10)
-        # toggle rects (drawn manually in options screen)
-        tw, th_h = 200, 48
-        self._toggle_sound_rect = pygame.Rect(cx - tw//2, 230, tw, th_h)
-        self._toggle_music_rect = pygame.Rect(cx - tw//2, 295, tw, th_h)
-        self._toggle_theme_rect = pygame.Rect(cx - tw//2, 360, tw, th_h)
-        # controls back button
+        ], cx, 510, w=260, h=50, gap=12)
+        tw, th_h = 240, 52
+        self._toggle_sound_rect = pygame.Rect(cx - tw//2, 248, tw, th_h)
+        self._toggle_music_rect = pygame.Rect(cx - tw//2, 318, tw, th_h)
+        self._toggle_theme_rect = pygame.Rect(cx - tw//2, 388, tw, th_h)
         self._ctrl_back_btn = Button(
-            pygame.Rect(cx - 120, WIN_H - 70, 240, 46),
+            pygame.Rect(cx - 130, WIN_H - 80, 260, 50),
             "← Back", font_name="menu_med"
         )
-    # events
     def handle_event(self, event) -> str | None:
         if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
             return None
@@ -126,7 +119,6 @@ class MenuScreen:
                 self._sub = self._SUB_OPTIONS
                 return None
         return None
-    # update
     def update(self):
         mp = panel_mouse_pos()
         if self._sub == self._SUB_NONE:
@@ -137,7 +129,6 @@ class MenuScreen:
             for btn, _ in self._opt_btns: btn.update(mp)
         elif self._sub == self._SUB_CONTROLS:
             self._ctrl_back_btn.update(mp)
-    # draw
     def draw(self):
         th  = theme.get()
         srf = self.surface
@@ -153,7 +144,6 @@ class MenuScreen:
         # footer on all sub-screens
         ver = font("hint").render("2048 Enhanced Edition  v2.0", True, th["hint_text"])
         srf.blit(ver, (WIN_W//2 - ver.get_width()//2, WIN_H - 20))
-    # sub-draw helpers
     def _draw_header(self, srf, th, subtitle=""):
         title = font("over").render("2048", True, th["accent"])
         blit_centered(srf, title, WIN_W//2, 90)
@@ -220,7 +210,7 @@ class MenuScreen:
         )
         pygame.draw.line(
             srf, th["divider"],
-            (WIN_W//2 - 130, 425), (WIN_W//2 + 130, 425), 1
+            (WIN_W//2 - 140, 460), (WIN_W//2 + 140, 460), 1
         )
         for btn, _ in self._opt_btns:
             btn.draw(srf, th)
@@ -258,7 +248,7 @@ class MenuScreen:
         row_h  = 38
         left   = WIN_W//2 - 230
         right  = WIN_W//2 + 10
-        start_y = 170
+        start_y = 185
         # column headers
         key_hdr = font("label").render("Key", True, th["accent"])
         act_hdr = font("label").render("Action", True, th["accent"])

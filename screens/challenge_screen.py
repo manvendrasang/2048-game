@@ -10,14 +10,14 @@ import systems.sound as sound
 from data.challenges import all_challenges
 from data.persistence import load_challenge_progress
 
-# ── Grid layout
+# Grid layout
 COLS      = 2
-CARD_W    = 230
+CARD_W    = 260
 CARD_H    = 110
 GAP_X     = 16
 GAP_Y     = 10
 GRID_LEFT = WIN_W // 2 - (COLS * CARD_W + GAP_X) // 2
-GRID_TOP  = 148
+GRID_TOP  = 158
 
 # Star colours
 STAR_ON  = (237, 194,  46)
@@ -62,8 +62,6 @@ class ChallengeScreen:
         x   = GRID_LEFT + col * (CARD_W + GAP_X)
         y   = GRID_TOP  + row * (CARD_H + GAP_Y)
         return pygame.Rect(x, y, CARD_W, CARD_H)
-
-    # events
     def handle_event(self, event) -> int | str | None:
         if self._back_btn.is_clicked(event):
             sound.play("click")
@@ -86,8 +84,6 @@ class ChallengeScreen:
                 self._hovered = i
                 break
         self._back_btn.update(mp)
-
-    # draw
     def draw(self):
         th         = theme.get()
         srf        = self.surface
@@ -104,12 +100,12 @@ class ChallengeScreen:
         progress   = load_challenge_progress()
         for i, ch in enumerate(challenges):
             rect    = self._card_rect(i)
-            hovered = i == self._hovered
+            hovered = (i == self._hovered)
             prog    = progress.get(str(ch["id"]), {})
             stars   = prog.get("stars", 0)
             best_mv = prog.get("best_moves", None)
             done    = prog.get("completed", False)
-            # ── card background
+            # card background
             if done:
                 bg = (38, 55, 38) if dark else (215, 235, 210)
             else:
@@ -131,27 +127,27 @@ class ChallengeScreen:
             if hovered:
                 pygame.draw.rect(srf, th["accent"], rect,
                                 width=2, border_radius=12)
-            # ── challenge number badge
+            # challenge number badge
             badge = pygame.Rect(rect.left + 10, rect.top + 8, 26, 26)
             draw_rounded_rect(srf, bar_col, badge, 6)
             num = font("hint").render(str(cid), True, (255, 255, 255))
             srf.blit(num, num.get_rect(center=badge.center))
-            # ── name
+            # name
             name_surf = font("label").render(ch["name"], True, th["hud_text"])
             srf.blit(name_surf, (rect.left + 42, rect.top + 10))
-            # ── description (two lines max)
+            # description (two lines max)
             desc_lines = ch["description"].split("\n")
             for li, line in enumerate(desc_lines[:2]):
                 d = font("hint").render(line, True, th["lbl_text"])
                 srf.blit(d, (rect.left + 10, rect.top + 38 + li * 16))
-            # ── stars (bottom right area)
+            # stars (bottom right area)
             _draw_stars(srf, stars, rect.right - 46, rect.top + 14)
-            # ── best moves badge
+            # best moves badge
             if best_mv and done:
                 mv_txt = font("hint").render(f"Best: {best_mv}mv", True, th["hint_text"])
                 srf.blit(mv_txt, mv_txt.get_rect(
                     right=rect.right - 8, bottom=rect.bottom - 6))
-            # ── goal hint
+            # goal hint
             if ch["goal_type"] == "tile":
                 goal_str = f"Goal: {ch['goal_value']} tile"
             elif ch["goal_type"] == "score":

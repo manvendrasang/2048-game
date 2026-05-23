@@ -63,7 +63,7 @@ PODIUM = [
 TAB_Y       = 118
 TAB_H       = 34
 TAB_RADIUS  = 8
-CONTENT_TOP = 168
+CONTENT_TOP = 185
 ROW_H       = 56
 ROW_RADIUS  = 10
 BAR_W       = 4     # left accent bar width
@@ -85,7 +85,6 @@ class LeaderboardScreen:
             "← Back", font_name="menu_med",
         )
         self._build_tabs()
-    # tab geometry
     def _build_tabs(self):
         n       = len(TABS)
         pad     = 28
@@ -95,7 +94,6 @@ class LeaderboardScreen:
             pygame.Rect(pad + i*(tw+gap), TAB_Y, tw, TAB_H)
             for i in range(n)
         ]
-    # events
     def handle_event(self, event) -> str | None:
         if self._back.is_clicked(event):
             sound.play("click")
@@ -113,7 +111,6 @@ class LeaderboardScreen:
         return None
     def update(self):
         self._back.update(panel_mouse_pos())
-    # draw
     def draw(self, _=None):
         th  = theme.get()
         srf = self.surface
@@ -169,7 +166,6 @@ class LeaderboardScreen:
         self._back.draw(srf, th)
         ver = font("hint").render("2048 Enhanced Edition  v2.0", True, th["hint_text"])
         srf.blit(ver, (WIN_W//2 - ver.get_width()//2, WIN_H - 20))
-    # single row
     def _draw_row(self, srf, i: int, e: dict, mode_filter, dark: bool, th: dict):
         ry  = CONTENT_TOP + 26 + i * ROW_H
         row = pygame.Rect(28, ry - 4, WIN_W - 56, ROW_H - 6)

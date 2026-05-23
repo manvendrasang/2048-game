@@ -8,7 +8,6 @@ from utils.drawing import draw_rounded_rect, font, blit_centered, Button, panel_
 import utils.theme as theme
 import systems.sound as sound
 
-
 class StatsScreen:
     def __init__(self, surface: pygame.Surface):
         self.surface = surface
@@ -41,9 +40,9 @@ class StatsScreen:
             ("Total Moves",       f"{moves:,}"),
             ("Avg Moves / Game",  str(avg_mv)),
         ]
-        card_w, card_h = 400, 58
+        card_w, card_h = 460, 62
         cx      = WIN_W // 2
-        start_y = 128
+        start_y = 148
         for i, (label, value) in enumerate(rows):
             y    = start_y + i * (card_h + 8)
             rect = pygame.Rect(cx - card_w//2, y, card_w, card_h)

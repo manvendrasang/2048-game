@@ -2,12 +2,12 @@
 # pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
 # pylint: disable=missing-final-newline, global-statement, missing-class-docstring
 
-# Logical game panel (fixed, never changes)
-WIN_W, WIN_H   = 540, 660
-BOARD_PX       = 460
-BOARD_TOP      = 140
-BOARD_LEFT     = 30
-PADDING        = 8
+# Logical game panel
+WIN_W, WIN_H   = 620, 800
+BOARD_PX       = 520
+BOARD_TOP      = 155
+BOARD_LEFT     = 50
+PADDING        = 10
 DEFAULT_BOARD  = 4
 
 # Fullscreen display dimensions (resolved at runtime)
