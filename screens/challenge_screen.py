@@ -100,7 +100,7 @@ class ChallengeScreen:
         progress   = load_challenge_progress()
         for i, ch in enumerate(challenges):
             rect    = self._card_rect(i)
-            hovered = (i == self._hovered)
+            hovered = i == self._hovered
             prog    = progress.get(str(ch["id"]), {})
             stars   = prog.get("stars", 0)
             best_mv = prog.get("best_moves", None)

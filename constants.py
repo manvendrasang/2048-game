@@ -3,10 +3,10 @@
 # pylint: disable=missing-final-newline, global-statement, missing-class-docstring
 
 # Logical game panel
-WIN_W, WIN_H   = 620, 800
-BOARD_PX       = 520
-BOARD_TOP      = 155
-BOARD_LEFT     = 50
+WIN_W, WIN_H   = 680, 880
+BOARD_PX       = 560
+BOARD_TOP      = 165
+BOARD_LEFT     = 60
 PADDING        = 10
 DEFAULT_BOARD  = 4
 
@@ -15,12 +15,15 @@ DISPLAY_W: int = WIN_W
 DISPLAY_H: int = WIN_H
 PANEL_OX:  int = 0
 PANEL_OY:  int = 0
+
+
 def set_display_size(dw: int, dh: int):
     global DISPLAY_W, DISPLAY_H, PANEL_OX, PANEL_OY
     DISPLAY_W = dw
     DISPLAY_H = dh
     PANEL_OX  = (dw - WIN_W) // 2
     PANEL_OY  = (dh - WIN_H) // 2
+
 
 # Animation
 ANIM_SPEED     = 0.18
@@ -31,6 +34,7 @@ MODE_TARGET      = "target"
 MODE_TIME_ATTACK = "time_attack"
 MODE_CHALLENGE   = "challenge"
 MODE_DAILY       = "daily"
+
 TIME_ATTACK_SECONDS = 120
 TARGET_TILE_DEFAULT = 2048
 
@@ -72,6 +76,7 @@ THEME_LIGHT = {
 BLACK       = (  0,   0,   0)
 WHITE       = (255, 255, 255)
 GRAY_DARK   = ( 30,  30,  40)
+
 color_dict = {
     0:    ( 50,  50,  65),
     2:    (238, 228, 218),
@@ -87,10 +92,15 @@ color_dict = {
     2048: (237, 194,  46),
 }
 FALLBACK_COLOR = (60, 180, 120)
+
+
 def getColor(value: int) -> tuple:
     return color_dict.get(value, FALLBACK_COLOR)
+
+
 def getTextColor(value: int) -> tuple:
     return (119, 110, 101) if value in (0, 2, 4) else WHITE
+
 
 # Particle burst config per threshold
 PARTICLE_CONFIGS = {
