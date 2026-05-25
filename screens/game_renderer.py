@@ -1,6 +1,5 @@
-# pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate, unused-argument
-# pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
-# pylint: disable=missing-final-newline, global-statement, missing-class-docstring, unused-import
+# pylint: disable=missing-module-docstring, missing-class-docstring, missing-function-docstring, unused-import, multiple-statements, protected-access
+# pylint: disable=unused-argument, no-member
 
 import pygame
 import constants as C
@@ -34,29 +33,67 @@ def _choose_tile_font(value: int) -> pygame.font.Font:
     else:        return font("tile_sm")
 
 
-def draw_board(surface: pygame.Surface, gs):
-    th = theme.get()
+def draw_board(surface: pygame.Surface, gs, haptic=None):
+    th        = theme.get()
+    n         = gs.size
+    cell_size = (BOARD_PX - PADDING * (n + 1)) / n
     board_rect = pygame.Rect(BOARD_LEFT, BOARD_TOP, BOARD_PX, BOARD_PX)
     draw_rounded_rect(surface, th["board_bg"], board_rect, 14)
 
-    n = gs.size
+    animating = gs.slide_anim.animating
+
+    # Draw empty cell slots always
     for r in range(n):
         for c in range(n):
             base = tile_rect(r, c, n)
-            val  = gs.matrix[r][c]
-            sc   = gs.tile_scales[r][c]
-            cx, cy = base.centerx, base.centery
-            w    = int(base.width  * sc)
-            h    = int(base.height * sc)
-            tr   = pygame.Rect(cx - w//2, cy - h//2, w, h)
+            draw_rounded_rect(surface, th["cell_empty"], base, 10)
 
-            color = getColor(val) if val else th["cell_empty"]
-            draw_rounded_rect(surface, color, tr, max(4, int(10 * sc)))
+    if animating:
+        # During slide: draw non-moving tiles from final matrix, skip tiles
+        # that are being animated (they will be drawn by slide system on top)
+        moving_dsts = {(int(round((s.dst_y - BOARD_TOP - PADDING) / (cell_size + PADDING))),
+                        int(round((s.dst_x - BOARD_LEFT - PADDING) / (cell_size + PADDING))))
+                    for s in gs.slide_anim._slides}
 
-            if val:
+        for r in range(n):
+            for c in range(n):
+                val = gs.matrix[r][c]
+                if val == 0 or (r, c) in moving_dsts:
+                    continue
+                base = tile_rect(r, c, n)
+                draw_rounded_rect(surface, getColor(val), base, 10)
                 tf  = _choose_tile_font(val)
                 lbl = tf.render(str(val), True, getTextColor(val))
-                surface.blit(lbl, lbl.get_rect(center=(cx, cy)))
+                surface.blit(lbl, lbl.get_rect(center=base.center))
+
+        # Draw sliding tiles on top
+        gs.slide_anim.draw(
+            surface, n, cell_size,
+            getColor, getTextColor, _choose_tile_font,
+            draw_rounded_rect, theme,
+        )
+    else:
+        # Normal draw with scale animations (spawn pop, merge pop)
+        for r in range(n):
+            for c in range(n):
+                base = tile_rect(r, c, n)
+                val  = gs.matrix[r][c]
+                sc   = gs.tile_scales[r][c]
+                cx2, cy2 = base.centerx, base.centery
+                w = int(base.width  * sc)
+                h = int(base.height * sc)
+                tr = pygame.Rect(cx2 - w//2, cy2 - h//2, w, h)
+                color = getColor(val) if val else th["cell_empty"]
+                draw_rounded_rect(surface, color, tr, max(4, int(10 * sc)))
+                if val:
+                    tf  = _choose_tile_font(val)
+                    lbl = tf.render(str(val), True, getTextColor(val))
+                    surface.blit(lbl, lbl.get_rect(center=(cx2, cy2)))
+
+    # Haptic border flash drawn on top of everything
+    if haptic:
+        haptic.update()
+        haptic.draw_border(surface, board_rect)
 
 
 

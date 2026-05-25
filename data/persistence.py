@@ -1,6 +1,4 @@
-# pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate, unused-argument, broad-exception-caught
-# pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
-# pylint: disable=missing-final-newline, global-statement, missing-class-docstring, unused-import, superfluous-parens, unspecified-encoding
+# pylint: disable=missing-module-docstring, missing-function-docstring, unspecified-encoding, broad-exception-caught
 
 import os
 import json
@@ -133,9 +131,9 @@ def get_save_slots() -> list:
 
 
 def save_to_slot(slot: int, matrix, size, score, moves,
-                 mode, elapsed, target_tile) -> bool:
+                mode, elapsed, target_tile) -> bool:
     """Save game state into slot (0-indexed). Overwrites if occupied."""
-    if not (0 <= slot < MAX_SLOTS):
+    if not 0 <= slot < MAX_SLOTS:
         return False
     slots = _load_saves()
     slots[slot] = {
@@ -154,7 +152,7 @@ def save_to_slot(slot: int, matrix, size, score, moves,
 
 def load_from_slot(slot: int) -> dict | None:
     """Load game state from slot (0-indexed). Returns None if empty."""
-    if not (0 <= slot < MAX_SLOTS):
+    if not 0 <= slot < MAX_SLOTS:
         return None
     slots = _load_saves()
     return slots[slot]
@@ -162,7 +160,7 @@ def load_from_slot(slot: int) -> dict | None:
 
 def delete_slot(slot: int):
     """Clear a save slot."""
-    if not (0 <= slot < MAX_SLOTS):
+    if not 0 <= slot < MAX_SLOTS:
         return
     slots = _load_saves()
     slots[slot] = None

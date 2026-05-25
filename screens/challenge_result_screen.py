@@ -1,6 +1,4 @@
-# pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate, unused-argument
-# pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
-# pylint: disable=missing-final-newline, global-statement, missing-class-docstring, unused-import, f-string-without-interpolation
+# pylint: disable=missing-module-docstring, missing-function-docstring, no-member
 
 import pygame
 import math

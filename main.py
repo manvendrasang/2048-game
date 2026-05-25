@@ -1,6 +1,5 @@
-# pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate, global-variable-not-assigned
-# pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
-# pylint: disable=missing-final-newline, global-statement, missing-class-docstring, redefined-outer-name, unused-import
+# pylint: disable=missing-module-docstring, missing-class-docstring, missing-function-docstring, no-name-in-module, no-member, unused-import, invalid-name
+# pylint: disable=global-statement, unnecessary-dunder-call, redefined-outer-name, global-variable-not-assigned
 
 import sys
 import pygame
@@ -24,6 +23,7 @@ from utils              import theme as theme_mod
 from game_state         import GameState
 from systems            import sound, particles, screenshake
 from systems            import music
+from systems.haptic     import HapticFeedback
 from systems.bg_particles import BgParticleSystem
 from screens.menu       import MenuScreen
 from screens.game_renderer import (
@@ -76,6 +76,7 @@ _active_challenge  = None   # challenge dict for current/last challenge
 
 particle_sys = particles.ParticleSystem()
 shake_sys    = screenshake.ScreenShake()
+haptic       = HapticFeedback()
 
 menu_screen         = MenuScreen(PANEL)
 leader_screen       = LeaderboardScreen(PANEL)
@@ -108,7 +109,7 @@ def _blit_panel(ox: int = 0, oy: int = 0):
     # shadow
     shadow = pygame.Surface((PANEL_W + 12, PANEL_H + 12), pygame.SRCALPHA)
     pygame.draw.rect(shadow, (0, 0, 0, 80),
-                     shadow.get_rect(), border_radius=22)
+                    shadow.get_rect(), border_radius=22)
     DISPLAY.blit(shadow, (BORDER_OX + ox + 4, BORDER_OY + oy + 6))
 
     # fill
@@ -131,17 +132,18 @@ def _blit_panel(ox: int = 0, oy: int = 0):
 #  Game / challenge starters
 
 def start_game(mode=MODE_CLASSIC, size=DEFAULT_BOARD,
-               target_tile=TARGET_TILE_DEFAULT,
-               time_budget=TIME_ATTACK_SECONDS,
-               challenge=None):
+            target_tile=TARGET_TILE_DEFAULT,
+            time_budget=TIME_ATTACK_SECONDS,
+            challenge=None):
     global gs, paused, current_screen, _active_challenge
     _active_challenge = challenge
     gs = GameState(size=size, mode=mode,
-                   target_tile=target_tile,
-                   time_budget=time_budget,
-                   challenge=challenge)
+                target_tile=target_tile,
+                time_budget=time_budget,
+                challenge=challenge)
     gs.reset(challenge=challenge)
     particle_sys.clear()
+    haptic.__init__()   # reset haptic state
     paused = False
     current_screen = S_GAME
     # music context
@@ -250,6 +252,9 @@ def handle_game_event(event):
         return
 
     if k in DIRECTION_MAP and not gs.game_over:
+        # Block new input while slide is still playing
+        if gs.slide_anim.animating:
+            return
         gs.push_undo()
         moved = gs.move(DIRECTION_MAP[k])
         if moved:
@@ -259,33 +264,34 @@ def handle_game_event(event):
                 particle_sys.burst(cx, cy, val)
                 if val >= 512:
                     sound.play("merge")
+                haptic.merge_flash()
             if gs.game_over and not gs.won:
                 shake_sys.shake(0.7)
                 sound.play("shake")
             if gs.won:
                 sound.play("win")
 
-            # check achievements after any game-ending move
             if gs.game_over:
                 newly = check_and_unlock_achievements()
                 if newly:
                     _ach_queue.extend(newly)
 
-            # challenge ended → show result screen
             if gs.game_over and gs.mode == MODE_CHALLENGE:
                 _show_challenge_result()
 
-            # daily ended → show daily result screen
             if gs.game_over and gs.mode == MODE_DAILY:
                 _show_daily_result()
+        else:
+            # Invalid move — haptic red flash
+            haptic.invalid_move()
 
     elif k == pygame.K_r:
         if gs.mode == MODE_CHALLENGE and _active_challenge:
             start_challenge(_active_challenge["id"])
         else:
             start_game(mode=gs.mode, size=gs.size,
-                       target_tile=gs.target_tile,
-                       time_budget=gs.time_budget)
+                    target_tile=gs.target_tile,
+                    time_budget=gs.time_budget)
     elif k == pygame.K_u and not gs.game_over:
         if gs.mode != MODE_DAILY:
             gs.pop_undo()
@@ -297,8 +303,8 @@ def handle_game_event(event):
     elif pygame.K_3 <= k <= pygame.K_6 and not gs.game_over \
             and gs.mode not in (MODE_CHALLENGE, MODE_DAILY):
         start_game(mode=gs.mode, size=k - pygame.K_0,
-                   target_tile=gs.target_tile,
-                   time_budget=gs.time_budget)
+                target_tile=gs.target_tile,
+                time_budget=gs.time_budget)
 
 
 def _show_challenge_result():
@@ -399,7 +405,7 @@ def _draw_ach_toast(dt: float):
     toast  = pygame.Surface((tw, th2), pygame.SRCALPHA)
     pygame.draw.rect(toast, (30, 30, 40, alpha), toast.get_rect(), border_radius=14)
     pygame.draw.rect(toast, (237, 194, 46, alpha), toast.get_rect(),
-                     width=2, border_radius=14)
+                    width=2, border_radius=14)
 
     icon_s = dfont("menu_med").render(ach["icon"], True, (255, 255, 255))
     icon_s.set_alpha(alpha)
@@ -485,7 +491,7 @@ def main():
         elif current_screen == S_GAME and gs:
             PANEL.fill(th["bg"])
             draw_hud(PANEL, gs, sound.is_enabled(), paused)
-            draw_board(PANEL, gs)
+            draw_board(PANEL, gs, haptic)
             draw_score_popups(PANEL, gs)
             particle_sys.draw(PANEL)
             if gs.game_over and gs.won and gs.mode not in (MODE_CHALLENGE, MODE_DAILY):

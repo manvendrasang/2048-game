@@ -1,6 +1,4 @@
-# pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate
-# pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
-# pylint: disable=missing-final-newline, global-statement, missing-class-docstring, redefined-outer-name
+# pylint: disable=missing-module-docstring, missing-function-docstring, redefined-outer-name
 
 import random
 from datetime import date
