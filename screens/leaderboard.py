@@ -1,6 +1,4 @@
-# pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate
-# pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
-# pylint: disable=missing-final-newline, global-statement, missing-class-docstring
+# pylint: disable=missing-module-docstring, missing-function-docstring, missing-class-docstring, no-member
 
 import pygame
 from constants import WIN_W, WIN_H, MODE_CLASSIC, MODE_TARGET, MODE_TIME_ATTACK, MODE_DAILY

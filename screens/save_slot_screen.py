@@ -106,7 +106,7 @@ class SaveSlotScreen:
         for i in range(10):
             rect = self._slot_rect(i)
             data = self._slots[i]
-            hovered = (i == self._hovered)
+            hovered = i == self._hovered
             # background card
             if data:
                 bg = (55, 65, 85) if theme.name() == "dark" else (200, 190, 175)

@@ -1,6 +1,4 @@
-# pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate
-# pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
-# pylint: disable=missing-final-newline, global-statement, missing-class-docstring
+# pylint: disable=missing-function-docstring, missing-module-docstring, global-statement, invalid-name
 
 # Logical game panel
 WIN_W, WIN_H   = 680, 880

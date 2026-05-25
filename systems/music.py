@@ -1,6 +1,5 @@
-# pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate, unused-argument, broad-exception-caught
-# pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
-# pylint: disable=missing-final-newline, global-statement, missing-class-docstring, unused-import, global-variable-not-assigned
+# pylint: disable=missing-module-docstring, missing-function-docstring, missing-class-docstring, multiple-statements, invalid-name, global-statement
+# pylint: disable=global-variable-not-assigned, broad-exception-caught
 
 import math
 import random

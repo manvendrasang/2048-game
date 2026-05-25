@@ -1,6 +1,4 @@
-# pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate
-# pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
-# pylint: disable=missing-final-newline, global-statement, missing-class-docstring, redefined-outer-name, unused-import
+# pylint: disable=missing-module-docstring, missing-function-docstring, missing-class-docstring, unused-import, no-member
 
 import pygame
 import math
@@ -107,7 +105,7 @@ class ProfileScreen:
         # Tabs
         mp = panel_mouse_pos()
         for i, (label, rect) in enumerate(zip(TAB_LABELS, self._tab_rects)):
-            active  = (i == self._tab)
+            active  = i == self._tab
             hovered = rect.collidepoint(mp) and not active
             if active:
                 bg = th["accent"]
@@ -123,7 +121,7 @@ class ProfileScreen:
             srf.blit(t, t.get_rect(center=rect.center))
 
         pygame.draw.line(srf, th["divider"], (40, TAB_Y + TAB_H + 10),
-                         (WIN_W - 40, TAB_Y + TAB_H + 10), 1)
+                        (WIN_W - 40, TAB_Y + TAB_H + 10), 1)
 
         if self._tab == TAB_PROFILE:
             self._draw_profile(srf, th, dark, cx)

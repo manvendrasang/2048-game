@@ -1,7 +1,4 @@
-# pylint: disable=no-name-in-module, missing-module-docstring, consider-using-enumerate
-# pylint: disable=no-member, invalid-name, missing-function-docstring, multiple-statements, too-many-instance-attributes
-# pylint: disable=missing-final-newline, global-statement, missing-class-docstring
-
+# pylint: disable=missing-module-docstring, missing-function-docstring, invalid-name, no-member, global-statement
 import numpy as np
 import pygame
 
