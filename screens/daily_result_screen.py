@@ -1,14 +1,14 @@
-# pylint: disable=missing-module-docstring, missing-function-docstring, no-member, broad-exception-caught
+# pylint: disable=missing-module-docstring, missing-function-docstring, no-member, broad-exception-caught, line-too-long
 
 import pygame
 import random
-from datetime import datetime
 from constants import WIN_W, WIN_H
 from utils.drawing import draw_rounded_rect, font, blit_centered, Button, panel_mouse_pos
 import utils.theme as theme
 import systems.sound as sound
 from data.persistence import get_daily_streak
-from data.daily_puzzle import daily_date_str, daily_puzzle_number
+from data.daily_puzzle import daily_date_str, daily_puzzle_number, seconds_until_next_puzzle, get_daily_description
+
 
 TILE_COLORS = {
     2:    (238, 228, 218),  4:    (237, 224, 200),
@@ -18,13 +18,17 @@ TILE_COLORS = {
     512:  (237, 200,  80),  1024: (237, 197,  63),
     2048: (237, 194,  46),
 }
+
+
 def _tile_col(val: int) -> tuple:
     return TILE_COLORS.get(val, (60, 180, 120))
+
 
 class DailyResultScreen:
     """
     Returns "menu" or None.
     """
+
     def __init__(self, surface: pygame.Surface):
         self.surface   = surface
         self._result   = None
@@ -35,6 +39,7 @@ class DailyResultScreen:
             (237, 194, 46), (100, 200, 140), (100, 160, 220),
             (220, 100, 100), (180, 100, 220),
         ]
+
         cx = WIN_W // 2
         self._menu_btn = Button(
             pygame.Rect(cx - 145, WIN_H - 100, 130, 50),
@@ -45,6 +50,7 @@ class DailyResultScreen:
             "Share", font_name="menu_med",
             bg=(50, 100, 160), hover_bg=(70, 130, 200),
         )
+
     def open(self, result: dict, already_played: bool = False):
         self._result  = result
         self._already = already_played
@@ -52,6 +58,7 @@ class DailyResultScreen:
         self._confetti = self._make_confetti()
         if not already_played:
             sound.play("win")
+
     def _make_confetti(self) -> list:
         return [
             {
@@ -65,6 +72,7 @@ class DailyResultScreen:
             }
             for _ in range(70)
         ]
+
     def handle_event(self, event) -> str | None:
         if self._menu_btn.is_clicked(event):
             sound.play("click")
@@ -73,6 +81,7 @@ class DailyResultScreen:
             sound.play("click")
             self._copy_result()
         return None
+
     def _copy_result(self):
         if not self._result:
             return
@@ -89,6 +98,7 @@ class DailyResultScreen:
             pygame.scrap.put(pygame.SCRAP_TEXT, txt.encode())
         except Exception:
             pass
+
     def update(self, dt: float):
         self._menu_btn.update(panel_mouse_pos())
         self._share_btn.update(panel_mouse_pos())
@@ -98,21 +108,30 @@ class DailyResultScreen:
             p["y"] += p["vy"]
             p["vy"] += 0.05
         self._confetti = [p for p in self._confetti if p["y"] < WIN_H + 20]
+
     def draw(self):
         th   = theme.get()
         srf  = self.surface
         dark = theme.name() == "dark"
         srf.fill(th["bg"])
         cx = WIN_W // 2
+
         if not self._already:
             self._draw_confetti(srf)
+
         # Header block
         num_str  = f"Daily Puzzle  #{daily_puzzle_number()}"
         hdr      = font("over").render(num_str, True, th["accent"])
         blit_centered(srf, hdr, cx, 72)
+
         date_surf = font("label").render(daily_date_str(), True, th["lbl_text"])
-        blit_centered(srf, date_surf, cx, 124)
-        pygame.draw.line(srf, th["divider"], (50, 150), (WIN_W - 50, 150), 1)
+        blit_centered(srf, date_surf, cx, 112)
+
+        desc_surf = font("hint").render(get_daily_description(), True, th["hint_text"])
+        blit_centered(srf, desc_surf, cx, 132)
+
+        pygame.draw.line(srf, th["divider"], (50, 152), (WIN_W - 50, 152), 1)
+
         # Status message
         if self._already:
             msg = font("menu_med").render("Already played today!", True, (180, 120, 60))
@@ -126,6 +145,7 @@ class DailyResultScreen:
             msg = font("menu_med").render("Puzzle Complete!", True, th["accent"])
             blit_centered(srf, msg, cx, 184)
             stat_top = 224
+
         # Stat cards
         if self._result:
             r      = self._result
@@ -140,6 +160,7 @@ class DailyResultScreen:
             gap     = 12
             total_w = len(stats) * cw + (len(stats) - 1) * gap
             sx      = cx - total_w // 2
+
             for label, val in stats:
                 card = pygame.Rect(sx, stat_top + 20, cw, ch2)
                 bg   = (48, 50, 68) if dark else (212, 206, 194)
@@ -149,6 +170,7 @@ class DailyResultScreen:
                 srf.blit(lbl_s, lbl_s.get_rect(centerx=card.centerx, top=card.top + 10))
                 srf.blit(val_s, val_s.get_rect(centerx=card.centerx, top=card.top + 36))
                 sx += cw + gap
+
         # Tile badge
         if self._result:
             ht       = self._result["highest_tile"]
@@ -160,10 +182,9 @@ class DailyResultScreen:
             srf.blit(ht_s, ht_s.get_rect(center=badge.center))
             lbl_s = font("hint").render("Highest tile reached", True, th["lbl_text"])
             blit_centered(srf, lbl_s, cx, badge_y + 74)
-        # Countdown
-        now       = datetime.now()
-        midnight  = now.replace(hour=23, minute=59, second=59)
-        remaining = (midnight - now).seconds + 1
+
+        # Countdown to next puzzle
+        remaining = seconds_until_next_puzzle()
         hh = remaining // 3600
         mm = (remaining % 3600) // 60
         ss = remaining % 60
@@ -171,12 +192,15 @@ class DailyResultScreen:
             f"Next puzzle in  {hh:02d}:{mm:02d}:{ss:02d}", True, th["hint_text"]
         )
         blit_centered(srf, countdown, cx, WIN_H - 145)
+
         self._menu_btn.draw(srf, th)
         self._share_btn.draw(srf, th)
+
         ver = font("hint").render(
             "2048 Enhanced Edition  v2.0", True, th["hint_text"]
         )
         srf.blit(ver, (WIN_W // 2 - ver.get_width() // 2, WIN_H - 20))
+
     def _draw_confetti(self, srf):
         for p in self._confetti:
             size = p["size"]

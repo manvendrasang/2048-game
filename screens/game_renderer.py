@@ -156,15 +156,17 @@ def draw_hud(surface: pygame.Surface, gs, sound_on: bool, paused: bool):
         n_lbl = font("hint").render(ch["name"], True, th["hint_text"])
         surface.blit(n_lbl, (BOARD_LEFT, 90))
     elif gs.mode == MODE_DAILY:
-        from data.daily_puzzle import daily_puzzle_number, daily_date_str
+        from data.daily_puzzle import daily_puzzle_number, daily_date_str, get_daily_description
         num_lbl = font("small").render(
             f"Daily Puzzle #{daily_puzzle_number()}", True, th["accent"]
         )
         surface.blit(num_lbl, num_lbl.get_rect(right=WIN_W - 30, top=mode_y))
         date_lbl = font("hint").render(daily_date_str(), True, th["lbl_text"])
         surface.blit(date_lbl, date_lbl.get_rect(right=WIN_W - 30, top=mode_y + 22))
-        no_undo = font("hint").render("No undo in daily mode", True, th["hint_text"])
-        surface.blit(no_undo, (BOARD_LEFT, 90))
+        desc_lbl = font("hint").render(get_daily_description(), True, th["hint_text"])
+        surface.blit(desc_lbl, (BOARD_LEFT, 90))
+        no_undo = font("hint").render("No undo · No save", True, th["hint_text"])
+        surface.blit(no_undo, (BOARD_LEFT, 108))
 
     # Hint bar
     sound_icon = "[M] Mute" if sound_on else "[M] Unmute"

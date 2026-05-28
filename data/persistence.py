@@ -63,7 +63,7 @@ def load_leaderboard_by_mode(mode: str | None) -> list:
 
 
 def add_leaderboard_entry(score: int, mode: str, extra: str = "",
-                          board_size: int = 4):
+                        board_size: int = 4):
     entries = load_leaderboard()
     entry = {
         "score":      score,
@@ -223,7 +223,8 @@ DAILY_FILE = _os.path.join(DATA_DIR, "daily.json")
 
 
 def today_str() -> str:
-    return datetime.now().strftime("%Y-%m-%d")
+    from data.daily_puzzle import get_puzzle_date
+    return get_puzzle_date().strftime("%Y-%m-%d")
 
 
 def load_daily_record() -> dict:
@@ -238,15 +239,15 @@ def load_daily_record() -> dict:
 def save_daily_result(score: int, moves: int, highest_tile: int) -> dict:
     """Save today's result. Returns the saved entry."""
     records = load_daily_record()
-    date    = today_str()
+    ds      = today_str()
     entry   = {
         "score":        score,
         "moves":        moves,
         "highest_tile": highest_tile,
         "completed":    True,
-        "date":         date,
+        "date":         ds,
     }
-    records[date] = entry
+    records[ds] = entry
     try:
         with open(DAILY_FILE, "w") as f:
             json.dump(records, f, indent=2)
@@ -257,16 +258,16 @@ def save_daily_result(score: int, moves: int, highest_tile: int) -> dict:
 
 def get_today_result() -> dict | None:
     """Returns today's result dict if already played, else None."""
-    records = load_daily_record()
-    return records.get(today_str())
+    return load_daily_record().get(today_str())
 
 
 def get_daily_streak() -> int:
     """Count consecutive days played ending today or yesterday."""
-    from datetime import date, timedelta
+    from data.daily_puzzle import get_puzzle_date
+    from datetime import timedelta
     records = load_daily_record()
     streak  = 0
-    day     = date.today()
+    day     = get_puzzle_date()
     while True:
         if day.strftime("%Y-%m-%d") in records:
             streak += 1
@@ -274,6 +275,21 @@ def get_daily_streak() -> int:
         else:
             break
     return streak
+
+
+def load_daily_leaderboard() -> list:
+    """Returns today's daily result as a leaderboard-compatible entry list."""
+    entry = get_today_result()
+    if not entry:
+        return []
+    return [{
+        "score":        entry["score"],
+        "mode":         "daily",
+        "extra":        str(entry["moves"]) + " mv",
+        "board_size":   4,
+        "date":         entry["date"],
+        "highest_tile": entry.get("highest_tile", 0),
+    }]
 
 
 # Achievements
