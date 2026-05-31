@@ -1,6 +1,9 @@
 # pylint: disable=missing-module-docstring, missing-class-docstring, missing-function-docstring, consider-using-enumerate, unused-variable
 # pylint: disable=multiple-statements, attribute-defined-outside-init
 
+# game_state.py
+# Pure game logic: board, movement, undo, scoring, win/lose detection.
+
 import random
 import copy
 from constants import (
@@ -146,36 +149,36 @@ class GameState:
         return moved, points, merges
 
     def move(self, direction: str) -> bool:
-        rotations = {"left": 0, "up": 1, "right": 2, "down": 3}
+        # Standard 2048 rotation: rotate CW N times so direction becomes leftward,
+        # slide left, rotate CCW N times back.
+        # left=0 (no rotation), right=2 (180°), down=1 (1xCW), up=3 (3xCW)
+        rotations = {"left": 0, "right": 2, "down": 1, "up": 3}
         rot = rotations[direction]
 
-        # Snapshot before moving (in screen coords) for slide animation
+        # Snapshot in screen space BEFORE any rotation
         before_screen = [row[:] for row in self.matrix]
 
         for _ in range(rot):
             self._rotate_cw()
 
-        # Snapshot in rotated (left-slide) frame for slide builder
-        before_rot = [row[:] for row in self.matrix]
-
         moved, pts, raw_merges = self._slide_left()
-
-        after_rot = [row[:] for row in self.matrix]
 
         self.merge_events = []
         for (rr, rc, val) in raw_merges:
             r2, c2 = rr, rc
             for _ in range((4 - rot) % 4):
-                r2, c2 = c2, self.size-1-r2
+                r2, c2 = c2, self.size - 1 - r2
             self.merge_events.append((r2, c2, val))
 
         for _ in range((4 - rot) % 4):
             self._rotate_cw()
 
-        # Build slide animation using rotated-frame before/after matrices
+        # Snapshot in screen space AFTER rotation is undone
+        after_screen = [row[:] for row in self.matrix]
+
+        # Build slide animation entirely in screen space
         if moved:
-            merge_dsts = {(rr, rc) for (rr, rc, _) in raw_merges}
-            self.slide_anim.build(before_rot, after_rot, merge_dsts, self.size)
+            self.slide_anim.build(before_screen, after_screen, self.size)
 
         if moved:
             self.score += pts
@@ -194,7 +197,7 @@ class GameState:
                     gv = ch["goal_value"]
                     ml = ch["move_limit"]
                     if (gt == "tile"  and ht >= gv) or \
-                       (gt == "score" and self.score >= gv):
+                    (gt == "score" and self.score >= gv):
                         self.won       = True
                         self.game_over = True
                         self._finish_challenge()

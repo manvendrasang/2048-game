@@ -53,7 +53,7 @@ def draw_board(surface: pygame.Surface, gs, haptic=None):
         # that are being animated (they will be drawn by slide system on top)
         moving_dsts = {(int(round((s.dst_y - BOARD_TOP - PADDING) / (cell_size + PADDING))),
                         int(round((s.dst_x - BOARD_LEFT - PADDING) / (cell_size + PADDING))))
-                    for s in gs.slide_anim._slides}
+                       for s in gs.slide_anim._slides}
 
         for r in range(n):
             for c in range(n):
@@ -116,11 +116,12 @@ def draw_hud(surface: pygame.Surface, gs, sound_on: bool, paused: bool):
     score_box("SCORE", str(gs.score), WIN_W - 300, 14)
     score_box("BEST",  str(gs.best),  WIN_W - 160, 14)
 
-    # Move counter
-    mv = font("small").render(f"Moves: {gs.moves}", True, th["move_text"])
-    surface.blit(mv, (BOARD_LEFT, 90))
+    # Move counter — skip in daily mode (shown differently below)
+    if gs.mode != MODE_DAILY:
+        mv = font("small").render(f"Moves: {gs.moves}", True, th["move_text"])
+        surface.blit(mv, (BOARD_LEFT, 90))
 
-    # Mode timer
+    # Mode-specific right-side info
     mode_y = 90
     if gs.mode == MODE_TARGET:
         t_lbl = font("timer").render(f"  {format_time(gs.elapsed)}", True, th["accent"])
@@ -134,43 +135,44 @@ def draw_hud(surface: pygame.Surface, gs, sound_on: bool, paused: bool):
         surface.blit(t_lbl, t_lbl.get_rect(right=WIN_W - 30, centery=mode_y + 10))
     elif gs.mode == MODE_CHALLENGE and gs.challenge:
         ch = gs.challenge
-        # goal progress
         gt = ch["goal_type"]
         gv = ch["goal_value"]
         if gt == "tile":
-            current = gs.highest_tile()
-            goal_lbl = f"Tile: {current} / {gv}"
+            goal_lbl = f"Tile: {gs.highest_tile()} / {gv}"
         else:
-            current = gs.score
-            goal_lbl = f"Score: {current:,} / {gv:,}"
+            goal_lbl = f"Score: {gs.score:,} / {gv:,}"
         g_surf = font("small").render(goal_lbl, True, th["accent"])
         surface.blit(g_surf, g_surf.get_rect(right=WIN_W - 30, top=mode_y))
-        # move limit countdown
         ml = ch["move_limit"]
         if ml > 0:
             left  = max(0, ml - gs.moves)
             m_col = (220, 80, 80) if left <= 5 else th["lbl_text"]
             m_lbl = font("small").render(f"Moves left: {left}", True, m_col)
             surface.blit(m_lbl, m_lbl.get_rect(right=WIN_W - 30, top=mode_y + 22))
-        # challenge name
         n_lbl = font("hint").render(ch["name"], True, th["hint_text"])
         surface.blit(n_lbl, (BOARD_LEFT, 90))
     elif gs.mode == MODE_DAILY:
         from data.daily_puzzle import daily_puzzle_number, daily_date_str, get_daily_description
+        # right side: puzzle number + date
         num_lbl = font("small").render(
             f"Daily Puzzle #{daily_puzzle_number()}", True, th["accent"]
         )
         surface.blit(num_lbl, num_lbl.get_rect(right=WIN_W - 30, top=mode_y))
         date_lbl = font("hint").render(daily_date_str(), True, th["lbl_text"])
-        surface.blit(date_lbl, date_lbl.get_rect(right=WIN_W - 30, top=mode_y + 22))
+        surface.blit(date_lbl, date_lbl.get_rect(right=WIN_W - 30, top=mode_y + 20))
+        # left side row 1: moves counter
+        mv_daily = font("small").render(f"Moves: {gs.moves}", True, th["move_text"])
+        surface.blit(mv_daily, (BOARD_LEFT, 90))
+        # left side row 2: description (on its own line, clearly below moves)
         desc_lbl = font("hint").render(get_daily_description(), True, th["hint_text"])
-        surface.blit(desc_lbl, (BOARD_LEFT, 90))
-        no_undo = font("hint").render("No undo · No save", True, th["hint_text"])
-        surface.blit(no_undo, (BOARD_LEFT, 108))
+        surface.blit(desc_lbl, (BOARD_LEFT, 110))
 
     # Hint bar
     sound_icon = "[M] Mute" if sound_on else "[M] Unmute"
-    hints = f"[Arrows] Move  [U] Undo  [S] Save  [P] Pause  [T] Theme  {sound_icon}  [ESC] Menu"
+    if gs.mode == MODE_DAILY:
+        hints = f"[Arrows] Move  [P] Pause  [T] Theme  {sound_icon}  [ESC] Menu  · No undo/save"
+    else:
+        hints = f"[Arrows] Move  [U] Undo  [S] Save  [P] Pause  [T] Theme  {sound_icon}  [ESC] Menu"
     hint_surf = font("hint").render(hints, True, th["hint_text"])
     surface.blit(hint_surf, (WIN_W//2 - hint_surf.get_width()//2, WIN_H - 20))
 
@@ -200,7 +202,7 @@ def draw_game_over(surface: pygame.Surface, gs):
     blit_centered(surface, font("hud").render(f"Score: {gs.score}", True, th["hud_text"]), cx, 295)
     blit_centered(surface, font("hud").render(f"Best:  {gs.best}",  True, th["accent"]),   cx, 335)
     blit_centered(surface, font("hud").render("[ R ] Restart   [ ESC ] Menu",
-                                            True, (180, 180, 200)), cx, 395)
+                                              True, (180, 180, 200)), cx, 395)
 
 
 def draw_win(surface: pygame.Surface, gs):
@@ -213,7 +215,7 @@ def draw_win(surface: pygame.Surface, gs):
         blit_centered(surface, font("hud").render(
             f"Time:  {format_time(gs.elapsed)}", True, th["accent"]), cx, 325)
     blit_centered(surface, font("hud").render("[ R ] Restart   [ ESC ] Menu",
-                                            True, (180, 180, 200)), cx, 395)
+                                              True, (180, 180, 200)), cx, 395)
 
 
 def draw_pause(surface: pygame.Surface):
