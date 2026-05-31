@@ -1,5 +1,9 @@
 # pylint: disable=missing-module-docstring, missing-function-docstring, missing-class-docstring, unused-import, no-member
 
+# screens/profile_screen.py
+# Combined Profile + Stats + Achievements screen.
+# Two tabs: "Profile & Stats" and "Achievements".
+
 import pygame
 import math
 from constants import WIN_W, WIN_H
@@ -77,14 +81,14 @@ class ProfileScreen:
                 if event.button == 4:
                     self._ach_scroll = max(0, self._ach_scroll - 30)
                 elif event.button == 5:
-                    self._ach_scroll += 30
+                    self._ach_scroll = max(0, self._ach_scroll + 30)  # max clamped in draw
 
         if event.type == pygame.KEYDOWN:
             if self._tab == TAB_ACHIEVEMENTS:
                 if event.key == pygame.K_UP:
                     self._ach_scroll = max(0, self._ach_scroll - 30)
                 elif event.key == pygame.K_DOWN:
-                    self._ach_scroll += 30
+                    self._ach_scroll = max(0, self._ach_scroll + 30)  # max clamped in draw
 
         return None
 
@@ -121,7 +125,7 @@ class ProfileScreen:
             srf.blit(t, t.get_rect(center=rect.center))
 
         pygame.draw.line(srf, th["divider"], (40, TAB_Y + TAB_H + 10),
-                        (WIN_W - 40, TAB_Y + TAB_H + 10), 1)
+                         (WIN_W - 40, TAB_Y + TAB_H + 10), 1)
 
         if self._tab == TAB_PROFILE:
             self._draw_profile(srf, th, dark, cx)
@@ -217,9 +221,23 @@ class ProfileScreen:
         content_top = TAB_Y + TAB_H + 20
         clip_top    = content_top
         clip_bottom = WIN_H - 90
+        visible_h   = clip_bottom - clip_top
+
+        # Compute total scrollable content height so we can cap the scroll
+        total_content_h = 0
+        for cat in CATEGORIES:
+            cat_achs = [a for a in ALL_ACHIEVEMENTS if a["category"] == cat]
+            if not cat_achs:
+                continue
+            total_content_h += 32                    # category header
+            total_content_h += len(cat_achs) * 70   # achievement cards
+            total_content_h += 10                    # gap after category
+
+        max_scroll = max(0, total_content_h - visible_h)
+        self._ach_scroll = min(self._ach_scroll, max_scroll)
 
         # Clip region so achievements don't bleed into back button
-        clip = pygame.Rect(0, clip_top, WIN_W, clip_bottom - clip_top)
+        clip = pygame.Rect(0, clip_top, WIN_W, visible_h)
         srf.set_clip(clip)
 
         y = content_top - self._ach_scroll
@@ -233,7 +251,6 @@ class ProfileScreen:
             if y + 30 > clip_top and y < clip_bottom:
                 cat_label = CATEGORY_LABELS[cat]
                 cat_col   = CATEGORY_COLORS[cat]
-                # coloured pill
                 pill = pygame.Rect(44, y, 10, 24)
                 draw_rounded_rect(srf, cat_col, pill, 4)
                 cs = font("label").render(cat_label, True, cat_col)
@@ -248,21 +265,18 @@ class ProfileScreen:
                 done   = ach["id"] in unlocked
                 card   = pygame.Rect(44, y, WIN_W - 88, 62)
 
-                # Background — golden tint for unlocked
                 if done:
                     bg = (60, 52, 22) if dark else (255, 248, 210)
                 else:
                     bg = (44, 46, 62) if dark else (214, 208, 196)
                 draw_rounded_rect(srf, bg, card, 10)
 
-                # Left colour bar
                 bar_col = CATEGORY_COLORS[cat] if done else th["divider"]
                 pygame.draw.rect(srf, bar_col,
                                  pygame.Rect(card.left, card.top, 4, card.height),
                                  border_top_left_radius=10,
                                  border_bottom_left_radius=10)
 
-                # Icon circle
                 ic_cx, ic_cy = card.left + 32, card.centery
                 pygame.draw.circle(
                     srf,
@@ -272,33 +286,42 @@ class ProfileScreen:
                 ic_s = font("menu_med").render(ach["icon"], True, (255, 255, 255))
                 srf.blit(ic_s, ic_s.get_rect(center=(ic_cx, ic_cy)))
 
-                # Name + description
                 name_col = th["accent"] if done else th["hud_text"]
                 ns = font("label").render(ach["name"], True, name_col)
                 ds = font("hint").render(ach["desc"],  True, th["lbl_text"])
                 srf.blit(ns, (card.left + 60, card.top + 10))
                 srf.blit(ds, (card.left + 60, card.top + 34))
 
-                # Unlocked badge
                 if done:
                     badge = font("hint").render("✓ Unlocked", True, (80, 200, 100))
-                    srf.blit(badge, badge.get_rect(
-                        right=card.right - 12, centery=card.centery
-                    ))
+                    srf.blit(badge, badge.get_rect(right=card.right - 12, centery=card.centery))
                 else:
                     lock = font("hint").render("Locked", True, th["hint_text"])
-                    srf.blit(lock, lock.get_rect(
-                        right=card.right - 12, centery=card.centery
-                    ))
+                    srf.blit(lock, lock.get_rect(right=card.right - 12, centery=card.centery))
 
                 y += 70
 
-            y += 10   # gap between categories
+            y += 10
 
         srf.set_clip(None)
 
-        # scroll hint
-        hint = font("hint").render(
-            "Scroll with mouse wheel or ↑ ↓", True, th["hint_text"]
-        )
+        # Scroll hint + progress indicator
+        scroll_pct = (self._ach_scroll / max_scroll * 100) if max_scroll > 0 else 100
+        if max_scroll > 0:
+            hint_txt = f"↑ ↓ or mouse wheel to scroll  ({int(scroll_pct)}%)"
+        else:
+            hint_txt = "All achievements visible"
+        hint = font("hint").render(hint_txt, True, th["hint_text"])
         srf.blit(hint, hint.get_rect(centerx=cx, top=clip_bottom + 4))
+
+        # Thin scroll bar on the right edge
+        if max_scroll > 0:
+            bar_x      = WIN_W - 12
+            bar_top    = clip_top + 4
+            bar_height = visible_h - 8
+            track      = pygame.Rect(bar_x, bar_top, 4, bar_height)
+            draw_rounded_rect(srf, th["divider"], track, 2)
+            thumb_h    = max(24, int(bar_height * visible_h / total_content_h))
+            thumb_y    = bar_top + int((bar_height - thumb_h) * self._ach_scroll / max_scroll)
+            thumb      = pygame.Rect(bar_x, thumb_y, 4, thumb_h)
+            draw_rounded_rect(srf, th["accent"], thumb, 2)
