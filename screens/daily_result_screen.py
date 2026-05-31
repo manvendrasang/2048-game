@@ -1,5 +1,4 @@
 # pylint: disable=missing-module-docstring, missing-function-docstring, no-member, broad-exception-caught, line-too-long
-
 import pygame
 import random
 from constants import WIN_W, WIN_H
@@ -143,8 +142,12 @@ class DailyResultScreen:
             stat_top = 255
         else:
             msg = font("menu_med").render("Puzzle Complete!", True, th["accent"])
-            blit_centered(srf, msg, cx, 184)
-            stat_top = 224
+            blit_centered(srf, msg, cx, 176)
+            sub = font("small").render(
+                "Board is full — no moves remaining.", True, th["hint_text"]
+            )
+            blit_centered(srf, sub, cx, 208)
+            stat_top = 234
 
         # Stat cards
         if self._result:

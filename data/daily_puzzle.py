@@ -1,31 +1,34 @@
 # pylint: disable=missing-module-docstring, missing-function-docstring, redefined-outer-name
 
+# daily_puzzle.py
+# Generates a deterministic daily board and description from today's date seed.
+
 import random
 from datetime import datetime, date, timedelta
 
 DAILY_RESET_HOUR = 0   # midnight local time
 
 _DESCRIPTIONS = [
-    "A fresh start — use the open space wisely.",
-    "Two seeds planted. Where will they grow?",
-    "The board is nearly empty. Build your tower.",
-    "Start small, think big — today's puzzle begins.",
-    "Patience is key. Every tile has a purpose.",
-    "A blank canvas. Make your first moves count.",
-    "Simple beginnings often lead to great tiles.",
-    "The journey to 2048 starts with two tiles.",
-    "Don't rush — the board rewards careful thinking.",
-    "Every great run starts exactly like this one.",
-    "Today's challenge: turn two tiles into glory.",
-    "A quiet board hides infinite possibilities.",
-    "Think three moves ahead from the very start.",
-    "Two tiles, endless paths — choose wisely.",
-    "The clock is reset. A new puzzle awaits.",
-    "Begin again. Today's board is uniquely yours.",
-    "Corners first — or do you have another plan?",
-    "Let the tiles guide you somewhere unexpected.",
-    "A new day, a new grid, a new opportunity.",
-    "From two tiles, can you reach the golden 2048?",
+    "Goal: score as high as possible before the board fills up. No undo, no save.",
+    "Goal: reach the highest tile you can before running out of moves.",
+    "Goal: chain as many merges as possible for a high score. Board ends when full.",
+    "Goal: maximize your score. The puzzle ends when no moves remain.",
+    "Goal: get the highest tile possible. Merging earns bonus combo points.",
+    "Goal: score beats progress — aim for big merges over big tiles.",
+    "Goal: play until the board is full. Your final score is recorded.",
+    "Goal: every tile must find a partner. Score as high as you can.",
+    "Goal: no time limit, no undo — just you, the tiles, and the score.",
+    "Goal: think carefully. The board ends when no merges are possible.",
+    "Goal: build toward 2048 and beyond. Score matters most today.",
+    "Goal: use combo merges to multiply your score. No second chances.",
+    "Goal: the puzzle ends when the board fills. Leave no tile behind.",
+    "Goal: achieve the highest score possible before moves run out.",
+    "Goal: plan your merges — chain reactions earn the most points.",
+    "Goal: reach the furthest tile you can before the board locks up.",
+    "Goal: every move counts. Score is final when the board is full.",
+    "Goal: maximize points through smart merges. No undo allowed.",
+    "Goal: how far can you go? Push for the highest tile and score.",
+    "Goal: one shot, one board, one score. Make every move count.",
 ]
 
 

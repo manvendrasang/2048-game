@@ -1,9 +1,6 @@
 # pylint: disable=missing-module-docstring, missing-class-docstring, missing-function-docstring, consider-using-enumerate, unused-variable
 # pylint: disable=multiple-statements, attribute-defined-outside-init
 
-# game_state.py
-# Pure game logic: board, movement, undo, scoring, win/lose detection.
-
 import random
 import copy
 from constants import (
@@ -21,9 +18,9 @@ from systems.slide_anim import SlideAnimSystem
 
 class GameState:
     def __init__(self, size=DEFAULT_BOARD, mode=MODE_CLASSIC,
-                target_tile=TARGET_TILE_DEFAULT,
-                time_budget=TIME_ATTACK_SECONDS,
-                challenge: dict | None = None):
+                 target_tile=TARGET_TILE_DEFAULT,
+                 time_budget=TIME_ATTACK_SECONDS,
+                 challenge: dict | None = None):
         self.size         = size
         self.mode         = mode
         self.target_tile  = target_tile
@@ -31,8 +28,9 @@ class GameState:
         self.elapsed      = 0.0
 
         # challenge metadata (None when not in challenge mode)
-        self.challenge        = challenge          # full challenge dict
+        self.challenge        = challenge
         self.challenge_failed = False
+        self.daily_finished   = False
 
         self.matrix       = [[0]*size for _ in range(size)]
         self.score        = 0
@@ -197,7 +195,7 @@ class GameState:
                     gv = ch["goal_value"]
                     ml = ch["move_limit"]
                     if (gt == "tile"  and ht >= gv) or \
-                    (gt == "score" and self.score >= gv):
+                       (gt == "score" and self.score >= gv):
                         self.won       = True
                         self.game_over = True
                         self._finish_challenge()
@@ -208,7 +206,7 @@ class GameState:
                     # daily puzzle ends only when no moves remain
                     pass
                 elif (self.mode == MODE_TARGET and ht >= self.target_tile) or \
-                    (self.mode == MODE_CLASSIC and ht >= 2048):
+                     (self.mode == MODE_CLASSIC and ht >= 2048):
                     self.won       = True
                     self.game_over = True
                     self._finish_game()
@@ -249,12 +247,15 @@ class GameState:
         self.challenge_stars = stars
 
     def _finish_daily(self):
-        """Record daily puzzle result."""
+        """Record daily puzzle result. Called when board is full (no moves left)."""
         ht = self.highest_tile()
         record_game(self.score, ht, self.moves)
         from data.persistence import save_daily_result
         save_daily_result(self.score, self.moves, ht)
-        self.won = True   # daily always "completes" — score is what matters
+        # Daily always counts as a completion regardless of score
+        self.won            = True
+        self.game_over      = True
+        self.daily_finished = True
 
     def _finish_game(self):
         record_game(self.score, self.highest_tile(), self.moves)
@@ -264,7 +265,7 @@ class GameState:
             s = int(self.elapsed) % 60
             extra = f"{m:02d}:{s:02d}"
         add_leaderboard_entry(self.score, self.mode, extra,
-                            board_size=self.size)
+                              board_size=self.size)
 
     def can_move(self) -> bool:
         n = self.size
@@ -279,7 +280,7 @@ class GameState:
         return False
 
     def reset(self, size=None, mode=None, target_tile=None,
-            time_budget=None, challenge=None):
+              time_budget=None, challenge=None):
         if size        is not None: self.size        = size
         if mode        is not None: self.mode        = mode
         if target_tile is not None: self.target_tile = target_tile
@@ -293,6 +294,7 @@ class GameState:
         self.win_shown        = False
         self.challenge_failed = False
         self.challenge_stars  = 0
+        self.daily_finished   = False
         self.undo_stack       = []
         self.tile_scales      = [[1.0]*self.size for _ in range(self.size)]
         self.score_popups     = []
