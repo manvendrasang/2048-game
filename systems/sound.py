@@ -1,4 +1,5 @@
-# pylint: disable=missing-module-docstring, missing-function-docstring, invalid-name, no-member, global-statement
+# pylint: disable=missing-module-docstring, missing-function-docstring, invalid-name, no-member, global-statement, broad-exception-caught, global-variable-not-assigned
+
 import numpy as np
 import pygame
 
@@ -7,7 +8,7 @@ _enabled = True
 
 
 def _make_sine(freq: float, duration: float, volume: float = 0.4,
-            decay: float = 1.0, sample_rate: int = 44100) -> pygame.mixer.Sound:
+               decay: float = 1.0, sample_rate: int = 44100) -> pygame.mixer.Sound:
     t    = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
     wave = np.sin(2 * np.pi * freq * t)
     env  = np.exp(-decay * t / duration)
@@ -27,7 +28,7 @@ def _make_chord(freqs: list[float], duration: float, volume: float = 0.35,
 
 
 def _make_noise_burst(duration: float, volume: float = 0.2,
-                    sample_rate: int = 44100) -> pygame.mixer.Sound:
+                      sample_rate: int = 44100) -> pygame.mixer.Sound:
     n    = int(sample_rate * duration)
     wave = np.random.uniform(-1, 1, n)
     env  = np.exp(-6 * np.linspace(0, 1, n))
@@ -36,20 +37,23 @@ def _make_noise_burst(duration: float, volume: float = 0.2,
     return pygame.sndarray.make_sound(stereo)
 
 
+_volume: float = 0.8   # 0.0 – 1.0
+
+
 def init():
-    global _sounds
+    global _sounds, _volume
     try:
         pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
         _sounds = {
-            "move":    _make_sine(440, 0.06, volume=0.25, decay=3.0),
-            "merge":   _make_chord([523, 659, 784], 0.18, volume=0.4, decay=2.0),
-            "undo":    _make_sine(330, 0.10, volume=0.3,  decay=2.5),
-            "win":     _make_chord([523, 659, 784, 1047], 0.7, volume=0.5, decay=0.8),
-            "lose":    _make_chord([220, 277, 330], 0.5, volume=0.4, decay=1.0),
-            "click":   _make_sine(600, 0.05, volume=0.2,  decay=5.0),
-            "shake":   _make_noise_burst(0.15, volume=0.3),
+            "move":    _make_sine(440, 0.06, volume=0.25 * _volume, decay=3.0),
+            "merge":   _make_chord([523, 659, 784], 0.18, volume=0.4 * _volume, decay=2.0),
+            "undo":    _make_sine(330, 0.10, volume=0.3 * _volume,  decay=2.5),
+            "win":     _make_chord([523, 659, 784, 1047], 0.7, volume=0.5 * _volume, decay=0.8),
+            "lose":    _make_chord([220, 277, 330], 0.5, volume=0.4 * _volume, decay=1.0),
+            "click":   _make_sine(600, 0.05, volume=0.2 * _volume,  decay=5.0),
+            "shake":   _make_noise_burst(0.15, volume=0.3 * _volume),
         }
-    except pygame.error as e:
+    except Exception as e:
         print("Sound init failed (continuing silently):", e)
         _sounds = {}
 
@@ -59,7 +63,7 @@ def play(name: str):
         return
     try:
         _sounds[name].play()
-    except pygame.error:
+    except Exception:
         pass
 
 
@@ -71,3 +75,14 @@ def toggle() -> bool:
 
 def is_enabled() -> bool:
     return _enabled
+
+
+def get_volume() -> float:
+    return _volume
+
+
+def set_volume(vol: float):
+    """Set SFX volume 0.0–1.0 and rebuild sound buffers."""
+    global _volume
+    _volume = max(0.0, min(1.0, vol))
+    init()   # rebuild buffers at new volume

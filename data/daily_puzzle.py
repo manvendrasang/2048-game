@@ -1,8 +1,5 @@
 # pylint: disable=missing-module-docstring, missing-function-docstring, redefined-outer-name
 
-# daily_puzzle.py
-# Generates a deterministic daily board and description from today's date seed.
-
 import random
 from datetime import datetime, date, timedelta
 

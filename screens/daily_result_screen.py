@@ -1,4 +1,5 @@
 # pylint: disable=missing-module-docstring, missing-function-docstring, no-member, broad-exception-caught, line-too-long
+
 import pygame
 import random
 from constants import WIN_W, WIN_H

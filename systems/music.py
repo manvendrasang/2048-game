@@ -146,3 +146,22 @@ def toggle() -> bool:
 
 def is_enabled() -> bool:
     return _enabled
+
+
+def get_volume() -> float:
+    if _channel:
+        try:
+            return _channel.get_volume()
+        except Exception:
+            pass
+    return 0.4
+
+
+def set_volume(vol: float):
+    """Set music volume 0.0–1.0."""
+    v = max(0.0, min(1.0, vol))
+    if _channel:
+        try:
+            _channel.set_volume(v)
+        except Exception:
+            pass

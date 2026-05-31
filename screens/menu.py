@@ -2,7 +2,7 @@
 
 import pygame
 from constants import WIN_W, WIN_H, MODE_CLASSIC, MODE_TARGET, MODE_TIME_ATTACK
-from utils.drawing import Button, draw_rounded_rect, font, blit_centered, panel_mouse_pos
+from utils.drawing import Button, draw_rounded_rect, font, blit_centered, panel_mouse_pos, Slider
 import utils.theme as theme
 import systems.sound as sound
 import systems.music as music
@@ -66,15 +66,29 @@ class MenuScreen:
         ], cx, 225, w=300, h=52, gap=42)
 
         # options menu (toggle rows built dynamically in draw)
+        # options layout — compacted to fit 3 toggles + 2 sliders + 2 buttons
         self._opt_btns = _make_buttons([
             ("Controls",  "controls"),
             ("← Back",    "back"),
-        ], cx, 510, w=260, h=50, gap=12)
+        ], cx, 620, w=260, h=48, gap=10)
 
-        tw, th_h = 240, 52
-        self._toggle_sound_rect = pygame.Rect(cx - tw//2, 248, tw, th_h)
-        self._toggle_music_rect = pygame.Rect(cx - tw//2, 318, tw, th_h)
-        self._toggle_theme_rect = pygame.Rect(cx - tw//2, 388, tw, th_h)
+        tw, th_h = 280, 46
+        ox = cx - tw // 2
+        self._toggle_sound_rect = pygame.Rect(ox, 195, tw, th_h)
+        self._toggle_music_rect = pygame.Rect(ox, 252, tw, th_h)
+        self._toggle_theme_rect = pygame.Rect(ox, 309, tw, th_h)
+
+        # Volume sliders (below toggles)
+        sw, sh = 380, 50
+        sx = cx - sw // 2
+        self._slider_sfx   = Slider(
+            pygame.Rect(sx, 372, sw, sh), "SFX Vol",
+            initial_value=sound.get_volume(),
+        )
+        self._slider_music = Slider(
+            pygame.Rect(sx, 434, sw, sh), "Music Vol",
+            initial_value=music.get_volume(),
+        )
 
         self._ctrl_back_btn = Button(
             pygame.Rect(cx - 130, WIN_H - 80, 260, 50),
@@ -83,12 +97,22 @@ class MenuScreen:
 
 
     def handle_event(self, event) -> str | None:
+        import constants as C
+        ox, oy = C.PANEL_OX, C.PANEL_OY
+
+        # Slider events (MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION) — options only
+        if self._sub == self._SUB_OPTIONS:
+            if event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION):
+                if self._slider_sfx.handle_event(event, ox, oy):
+                    sound.set_volume(self._slider_sfx.value)
+                if self._slider_music.handle_event(event, ox, oy):
+                    music.set_volume(self._slider_music.value)
+
         if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
             return None
 
         # translate display coords → panel coords
-        import constants as C
-        pos = (event.pos[0] - C.PANEL_OX, event.pos[1] - C.PANEL_OY)
+        pos = (event.pos[0] - ox, event.pos[1] - oy)
 
         if self._sub == self._SUB_NONE:
             for btn, action in self._main_btns:
@@ -96,6 +120,10 @@ class MenuScreen:
                     sound.play("click")
                     if action in ("modes", "options"):
                         self._sub = action
+                        if action == "options":
+                            # sync sliders to current volume
+                            self._slider_sfx.value   = sound.get_volume()
+                            self._slider_music.value = music.get_volume()
                         return None
                     return action
         elif self._sub == self._SUB_MODES:
@@ -129,7 +157,6 @@ class MenuScreen:
                     elif action == "back":
                         self._sub = self._SUB_NONE
                     return None
-
         elif self._sub == self._SUB_CONTROLS:
             if self._ctrl_back_btn.is_clicked(event):
                 sound.play("click")
@@ -222,7 +249,7 @@ class MenuScreen:
     def _draw_options(self, srf, th):
         self._draw_header(srf, th, "Options")
 
-        # Sound toggle
+        # SFX toggle
         self._draw_toggle(
             srf, th, self._toggle_sound_rect,
             label="SFX", state=sound.is_enabled(),
@@ -244,10 +271,17 @@ class MenuScreen:
             on_text="Dark", off_text="Light",
         )
 
-        pygame.draw.line(
-            srf, th["divider"],
-            (WIN_W//2 - 140, 460), (WIN_W//2 + 140, 460), 1
-        )
+        pygame.draw.line(srf, th["divider"],
+                         (WIN_W//2 - 160, 366), (WIN_W//2 + 160, 366), 1)
+
+        # Volume sliders
+        vol_lbl = font("hint").render("Volume", True, th["lbl_text"])
+        blit_centered(srf, vol_lbl, WIN_W//2, 360)
+        self._slider_sfx.draw(srf, th)
+        self._slider_music.draw(srf, th)
+
+        pygame.draw.line(srf, th["divider"],
+                         (WIN_W//2 - 160, 498), (WIN_W//2 + 160, 498), 1)
 
         for btn, _ in self._opt_btns:
             btn.draw(srf, th)

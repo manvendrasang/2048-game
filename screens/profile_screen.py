@@ -1,9 +1,5 @@
 # pylint: disable=missing-module-docstring, missing-function-docstring, missing-class-docstring, unused-import, no-member
 
-# screens/profile_screen.py
-# Combined Profile + Stats + Achievements screen.
-# Two tabs: "Profile & Stats" and "Achievements".
-
 import pygame
 import math
 from constants import WIN_W, WIN_H
@@ -109,7 +105,7 @@ class ProfileScreen:
         # Tabs
         mp = panel_mouse_pos()
         for i, (label, rect) in enumerate(zip(TAB_LABELS, self._tab_rects)):
-            active  = i == self._tab
+            active  = i == self._tab   
             hovered = rect.collidepoint(mp) and not active
             if active:
                 bg = th["accent"]
