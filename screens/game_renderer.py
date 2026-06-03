@@ -38,6 +38,27 @@ def draw_board(surface: pygame.Surface, gs, haptic=None):
     n         = gs.size
     cell_size = (BOARD_PX - PADDING * (n + 1)) / n
     board_rect = pygame.Rect(BOARD_LEFT, BOARD_TOP, BOARD_PX, BOARD_PX)
+
+    # Soft shadow — three layers, each offset down-right and slightly larger,
+    # darkening opacity so the innermost layer is strongest
+    shadow_layers = [
+        (6,  8,  40),   # (x_offset, y_offset, alpha)
+        (3,  5,  60),
+        (1,  2,  80),
+    ]
+    for sx, sy, alpha in shadow_layers:
+        shadow_rect = board_rect.inflate(sx * 2, sy * 2).move(sx, sy)
+        shadow_surf = pygame.Surface(
+            (shadow_rect.width, shadow_rect.height), pygame.SRCALPHA
+        )
+        pygame.draw.rect(
+            shadow_surf,
+            (0, 0, 0, alpha),
+            shadow_surf.get_rect(),
+            border_radius=18,
+        )
+        surface.blit(shadow_surf, shadow_rect.topleft)
+
     draw_rounded_rect(surface, th["board_bg"], board_rect, 14)
 
     animating = gs.slide_anim.animating

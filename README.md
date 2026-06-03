@@ -21,7 +21,7 @@ Data Files (auto-created in 'data/')
 - savedata.json    =last saved game
 - best.txt         =all-time best score
 
->The board should have a subtle shadow under it to separate it from the background visually
+
 >Score counter should animate upward (rolling digits) rather than jumping instantly
 >Hint system — show the single best next move as a subtle arrow or tile highlight, togglable from options. This keeps casual players engaged
 >Undo limit tokens (e.g. 3 per game shown as icons in the HUD) — much better UX than unlimited undo which trivializes the game
