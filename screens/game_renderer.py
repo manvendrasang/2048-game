@@ -151,7 +151,8 @@ def _draw_undo_tokens(surface: pygame.Surface, gs, th: dict):
             pygame.draw.circle(surface, th["hint_text"], (cx, y), r, 1)
 
 
-def draw_hud(surface: pygame.Surface, gs, sound_on: bool, paused: bool):
+def draw_hud(surface: pygame.Surface, gs, sound_on: bool, paused: bool,
+            displayed_score: int | None = None):
     th = theme.get()
 
     # Title
@@ -159,6 +160,7 @@ def draw_hud(surface: pygame.Surface, gs, sound_on: bool, paused: bool):
     surface.blit(title, (BOARD_LEFT, 14))
 
     # Score boxes
+    score_to_show = displayed_score if displayed_score is not None else gs.score
     def score_box(label_txt, val_txt, x, y, w=110, h=55):
         box = pygame.Rect(x, y, w, h)
         draw_rounded_rect(surface, th["score_box_bg"], box, 10)
@@ -167,8 +169,8 @@ def draw_hud(surface: pygame.Surface, gs, sound_on: bool, paused: bool):
         surface.blit(lbl, lbl.get_rect(centerx=x+w//2, top=y+6))
         surface.blit(val, val.get_rect(centerx=x+w//2, top=y+24))
 
-    score_box("SCORE", str(gs.score), WIN_W - 300, 14)
-    score_box("BEST",  str(gs.best),  WIN_W - 160, 14)
+    score_box("SCORE", str(score_to_show), WIN_W - 300, 14)
+    score_box("BEST",  str(gs.best),       WIN_W - 160, 14)
 
     # Move counter — skip in daily mode (shown differently below)
     if gs.mode != MODE_DAILY:

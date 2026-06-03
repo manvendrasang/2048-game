@@ -1,6 +1,11 @@
 # pylint: disable=missing-module-docstring, missing-class-docstring, missing-function-docstring, no-name-in-module, no-member, unused-import, invalid-name
 # pylint: disable=global-statement, unnecessary-dunder-call, redefined-outer-name, global-variable-not-assigned, line-too-long
 
+# main.py
+# Entry point. Fullscreen display with centred panel.
+# Wires: menu, game, leaderboard, stats, save-slot, challenge picker,
+#        challenge result, background music, bg particles.
+
 import sys
 import pygame
 from pygame.locals import QUIT, KEYDOWN
@@ -24,6 +29,7 @@ from game_state         import GameState
 from systems            import sound, particles, screenshake
 from systems            import music
 from systems.haptic     import HapticFeedback
+from systems.score_anim import ScoreAnimator
 from systems.bg_particles import BgParticleSystem
 from screens.menu       import MenuScreen
 from screens.game_renderer import (
@@ -83,6 +89,7 @@ _active_challenge  = None   # challenge dict for current/last challenge
 particle_sys = particles.ParticleSystem()
 shake_sys    = screenshake.ScreenShake()
 haptic       = HapticFeedback()
+score_anim   = ScoreAnimator()
 
 menu_screen         = MenuScreen(PANEL)
 leader_screen       = LeaderboardScreen(PANEL)
@@ -149,7 +156,8 @@ def start_game(mode=MODE_CLASSIC, size=DEFAULT_BOARD,
                 challenge=challenge)
     gs.reset(challenge=challenge)
     particle_sys.clear()
-    haptic.__init__()   # reset haptic state
+    haptic.__init__()
+    score_anim.snap(0)
     paused = False
     current_screen = S_GAME
     # music context
@@ -381,6 +389,7 @@ def handle_save_slot_event(event):
             if new_gs.load(slot):
                 gs = new_gs
                 particle_sys.clear()
+                score_anim.snap(gs.score)
                 paused = False
                 current_screen = S_GAME
                 music.set_context("game")
@@ -481,6 +490,8 @@ def main():
             if not paused:
                 gs.tick_animations(dt)
                 particle_sys.update()
+                score_anim.set_target(gs.score)
+                score_anim.tick(dt)
             shake_sys.update()
         elif current_screen == S_LEADER:
             leader_screen.update()
@@ -502,7 +513,8 @@ def main():
             menu_screen.draw()
         elif current_screen == S_GAME and gs:
             PANEL.fill(th["bg"])
-            draw_hud(PANEL, gs, sound.is_enabled(), paused)
+            draw_hud(PANEL, gs, sound.is_enabled(), paused,
+                    displayed_score=score_anim.value)
             draw_board(PANEL, gs, haptic)
             draw_score_popups(PANEL, gs)
             particle_sys.draw(PANEL)
