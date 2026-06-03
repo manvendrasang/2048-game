@@ -53,7 +53,7 @@ def draw_board(surface: pygame.Surface, gs, haptic=None):
         # that are being animated (they will be drawn by slide system on top)
         moving_dsts = {(int(round((s.dst_y - BOARD_TOP - PADDING) / (cell_size + PADDING))),
                         int(round((s.dst_x - BOARD_LEFT - PADDING) / (cell_size + PADDING))))
-                       for s in gs.slide_anim._slides}
+                    for s in gs.slide_anim._slides}
 
         for r in range(n):
             for c in range(n):
@@ -97,6 +97,25 @@ def draw_board(surface: pygame.Surface, gs, haptic=None):
 
 
 
+def _draw_undo_tokens(surface: pygame.Surface, gs, th: dict):
+    """Draw undo token circles: filled = available, hollow = spent."""
+    tokens_total = 3
+    r     = 8
+    gap   = 6
+    start_x = BOARD_LEFT
+    y     = 112
+    lbl   = font("hint").render("Undos:", True, th["lbl_text"])
+    surface.blit(lbl, (start_x, y - lbl.get_height() // 2))
+    ox = start_x + lbl.get_width() + 8
+    for i in range(tokens_total):
+        cx = ox + i * (r * 2 + gap) + r
+        if i < gs.undo_tokens:
+            pygame.draw.circle(surface, th["accent"], (cx, y), r)
+        else:
+            pygame.draw.circle(surface, th["divider"], (cx, y), r)
+            pygame.draw.circle(surface, th["hint_text"], (cx, y), r, 1)
+
+
 def draw_hud(surface: pygame.Surface, gs, sound_on: bool, paused: bool):
     th = theme.get()
 
@@ -120,6 +139,10 @@ def draw_hud(surface: pygame.Surface, gs, sound_on: bool, paused: bool):
     if gs.mode != MODE_DAILY:
         mv = font("small").render(f"Moves: {gs.moves}", True, th["move_text"])
         surface.blit(mv, (BOARD_LEFT, 90))
+
+    # Undo tokens — shown for all modes except daily/challenge
+    if gs.mode not in (MODE_DAILY, MODE_CHALLENGE):
+        _draw_undo_tokens(surface, gs, th)
 
     # Mode-specific right-side info
     mode_y = 90
@@ -202,7 +225,7 @@ def draw_game_over(surface: pygame.Surface, gs):
     blit_centered(surface, font("hud").render(f"Score: {gs.score}", True, th["hud_text"]), cx, 295)
     blit_centered(surface, font("hud").render(f"Best:  {gs.best}",  True, th["accent"]),   cx, 335)
     blit_centered(surface, font("hud").render("[ R ] Restart   [ ESC ] Menu",
-                                              True, (180, 180, 200)), cx, 395)
+                                            True, (180, 180, 200)), cx, 395)
 
 
 def draw_win(surface: pygame.Surface, gs):
@@ -215,7 +238,7 @@ def draw_win(surface: pygame.Surface, gs):
         blit_centered(surface, font("hud").render(
             f"Time:  {format_time(gs.elapsed)}", True, th["accent"]), cx, 325)
     blit_centered(surface, font("hud").render("[ R ] Restart   [ ESC ] Menu",
-                                              True, (180, 180, 200)), cx, 395)
+                                            True, (180, 180, 200)), cx, 395)
 
 
 def draw_pause(surface: pygame.Surface):

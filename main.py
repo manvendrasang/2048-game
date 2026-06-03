@@ -1,5 +1,5 @@
 # pylint: disable=missing-module-docstring, missing-class-docstring, missing-function-docstring, no-name-in-module, no-member, unused-import, invalid-name
-# pylint: disable=global-statement, unnecessary-dunder-call, redefined-outer-name, global-variable-not-assigned
+# pylint: disable=global-statement, unnecessary-dunder-call, redefined-outer-name, global-variable-not-assigned, line-too-long
 
 import sys
 import pygame
@@ -45,6 +45,12 @@ from data.daily_puzzle import generate_daily_board
 
 CLOCK = pygame.time.Clock()
 init_fonts()
+
+# Load persisted settings before initialising sound/music/theme
+from data.settings import load as load_settings, apply_to_systems, set as set_setting, get as get_setting
+load_settings()
+apply_to_systems()
+
 sound.init()
 music.init()
 migrate_legacy_save()
@@ -109,7 +115,7 @@ def _blit_panel(ox: int = 0, oy: int = 0):
     # shadow
     shadow = pygame.Surface((PANEL_W + 12, PANEL_H + 12), pygame.SRCALPHA)
     pygame.draw.rect(shadow, (0, 0, 0, 80),
-                     shadow.get_rect(), border_radius=22)
+                    shadow.get_rect(), border_radius=22)
     DISPLAY.blit(shadow, (BORDER_OX + ox + 4, BORDER_OY + oy + 6))
 
     # fill
@@ -132,15 +138,15 @@ def _blit_panel(ox: int = 0, oy: int = 0):
 #  Game / challenge starters
 
 def start_game(mode=MODE_CLASSIC, size=DEFAULT_BOARD,
-               target_tile=TARGET_TILE_DEFAULT,
-               time_budget=TIME_ATTACK_SECONDS,
-               challenge=None):
+            target_tile=TARGET_TILE_DEFAULT,
+            time_budget=TIME_ATTACK_SECONDS,
+            challenge=None):
     global gs, paused, current_screen, _active_challenge
     _active_challenge = challenge
     gs = GameState(size=size, mode=mode,
-                   target_tile=target_tile,
-                   time_budget=time_budget,
-                   challenge=challenge)
+                target_tile=target_tile,
+                time_budget=time_budget,
+                challenge=challenge)
     gs.reset(challenge=challenge)
     particle_sys.clear()
     haptic.__init__()   # reset haptic state
@@ -198,13 +204,16 @@ def handle_global_key(event) -> bool:
     if event.type != KEYDOWN:
         return False
     if event.key == pygame.K_t:
-        theme_mod.toggle()
+        new_theme = theme_mod.toggle()
+        set_setting("theme", new_theme)
         return True
     if event.key == pygame.K_m:
-        sound.toggle()
+        enabled = sound.toggle()
+        set_setting("sfx_enabled", enabled)
         return True
     if event.key == pygame.K_n:
-        music.toggle()
+        enabled = music.toggle()
+        set_setting("music_enabled", enabled)
         return True
     return False
 
@@ -290,12 +299,15 @@ def handle_game_event(event):
             start_challenge(_active_challenge["id"])
         else:
             start_game(mode=gs.mode, size=gs.size,
-                       target_tile=gs.target_tile,
-                       time_budget=gs.time_budget)
+                    target_tile=gs.target_tile,
+                    time_budget=gs.time_budget)
     elif k == pygame.K_u and not gs.game_over:
         if gs.mode != MODE_DAILY:
-            gs.pop_undo()
-            sound.play("undo")
+            if gs.can_undo:
+                gs.pop_undo()
+                sound.play("undo")
+            else:
+                haptic.invalid_move()   # red flash when no tokens left
     elif k == pygame.K_s and not gs.game_over and gs.mode not in (MODE_CHALLENGE, MODE_DAILY):
         open_save_slots("save", S_GAME)
     elif k == pygame.K_l and gs.mode not in (MODE_CHALLENGE, MODE_DAILY):
@@ -303,8 +315,8 @@ def handle_game_event(event):
     elif pygame.K_3 <= k <= pygame.K_6 and not gs.game_over \
             and gs.mode not in (MODE_CHALLENGE, MODE_DAILY):
         start_game(mode=gs.mode, size=k - pygame.K_0,
-                   target_tile=gs.target_tile,
-                   time_budget=gs.time_budget)
+                target_tile=gs.target_tile,
+                time_budget=gs.time_budget)
 
 
 def _show_challenge_result():
@@ -405,7 +417,7 @@ def _draw_ach_toast(dt: float):
     toast  = pygame.Surface((tw, th2), pygame.SRCALPHA)
     pygame.draw.rect(toast, (30, 30, 40, alpha), toast.get_rect(), border_radius=14)
     pygame.draw.rect(toast, (237, 194, 46, alpha), toast.get_rect(),
-                     width=2, border_radius=14)
+                    width=2, border_radius=14)
 
     icon_s = dfont("menu_med").render(ach["icon"], True, (255, 255, 255))
     icon_s.set_alpha(alpha)

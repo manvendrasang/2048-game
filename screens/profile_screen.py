@@ -12,6 +12,7 @@ from data.persistence import (
 )
 from data.achievements import ALL_ACHIEVEMENTS, CATEGORIES, CATEGORY_LABELS
 from data.daily_puzzle import daily_puzzle_number
+from data.ranks import get_rank, get_next_rank, rank_progress
 
 
 TAB_PROFILE      = 0
@@ -105,7 +106,7 @@ class ProfileScreen:
         # Tabs
         mp = panel_mouse_pos()
         for i, (label, rect) in enumerate(zip(TAB_LABELS, self._tab_rects)):
-            active  = i == self._tab   
+            active  = i == self._tab
             hovered = rect.collidepoint(mp) and not active
             if active:
                 bg = th["accent"]
@@ -121,7 +122,7 @@ class ProfileScreen:
             srf.blit(t, t.get_rect(center=rect.center))
 
         pygame.draw.line(srf, th["divider"], (40, TAB_Y + TAB_H + 10),
-                         (WIN_W - 40, TAB_Y + TAB_H + 10), 1)
+                        (WIN_W - 40, TAB_Y + TAB_H + 10), 1)
 
         if self._tab == TAB_PROFILE:
             self._draw_profile(srf, th, dark, cx)
@@ -134,38 +135,68 @@ class ProfileScreen:
         srf.blit(ver, (WIN_W // 2 - ver.get_width() // 2, WIN_H - 20))
 
     def _draw_profile(self, srf, th, dark, cx):
-        stats   = load_stats()
+        stats    = load_stats()
         unlocked = load_unlocked_achievements()
         streak   = get_daily_streak()
         daily    = load_daily_record()
         ch_prog  = load_challenge_progress()
 
-        content_top = TAB_Y + TAB_H + 24
+        content_top  = TAB_Y + TAB_H + 24
+        total_sc     = stats.get("total_score", 0)
+        current_rank = get_rank(total_sc)
+        next_rank    = get_next_rank(total_sc)
+        progress     = rank_progress(total_sc)
 
-        # Avatar circle with initials / highest tile
-        av_cx, av_cy = cx, content_top + 48
-        av_r         = 44
+        # Rank banner
+        rank_rect = pygame.Rect(cx - 200, content_top, 400, 56)
+        draw_rounded_rect(srf, current_rank["color"] if dark
+                        else tuple(min(255, c+80) for c in current_rank["color"]),
+                        rank_rect, 14)
+        ri  = font("menu_med").render(
+            f"{current_rank['icon']}  {current_rank['name']}", True, (30, 30, 30)
+        )
+        srf.blit(ri, ri.get_rect(center=rank_rect.center))
+
+        # Rank progress bar to next rank
+        bar_y = content_top + 62
+        bar_rect = pygame.Rect(cx - 200, bar_y, 400, 12)
+        draw_rounded_rect(srf, th["divider"], bar_rect, 6)
+        fill_w = int(400 * progress)
+        if fill_w > 0:
+            draw_rounded_rect(srf, current_rank["color"],
+                            pygame.Rect(cx - 200, bar_y, fill_w, 12), 6)
+        if next_rank:
+            pct_txt = font("hint").render(
+                f"{int(progress*100)}% → {next_rank['name']}  "
+                f"({total_sc:,} / {next_rank['min_score']:,})",
+                True, th["lbl_text"]
+            )
+        else:
+            pct_txt = font("hint").render("Max Rank Achieved!", True, th["accent"])
+        srf.blit(pct_txt, pct_txt.get_rect(centerx=cx, top=bar_y + 16))
+
+        # Avatar circle with highest tile
+        av_cx, av_cy = cx, content_top + 140
+        av_r         = 40
         pygame.draw.circle(srf, th["accent"], (av_cx, av_cy), av_r)
         pygame.draw.circle(srf, th["bg"],     (av_cx, av_cy), av_r - 4)
         ht_val  = stats.get("highest_tile", 0)
         av_txt  = str(ht_val) if ht_val else "—"
         av_surf = font("hud").render(av_txt, True, th["accent"])
         srf.blit(av_surf, av_surf.get_rect(center=(av_cx, av_cy)))
-
         label_surf = font("hint").render("Best Tile", True, th["lbl_text"])
-        srf.blit(label_surf, label_surf.get_rect(centerx=cx, top=av_cy + av_r + 6))
+        srf.blit(label_surf, label_surf.get_rect(centerx=cx, top=av_cy + av_r + 5))
 
-        # Quick summary badges
-        badge_y   = content_top + 120
+        # Quick badges
+        badge_y   = content_top + 212
         badges    = [
-            (f"{stats.get('games_played', 0)}",  "Games"),
-            (f"{streak}🔥",                       "Streak"),
-            (f"{len(unlocked)}/20",               "Achiev."),
-            (f"{sum(1 for v in ch_prog.values() if v.get('completed'))}/10",
-                                                   "Challs"),
+            (f"{stats.get('games_played', 0)}",   "Games"),
+            (f"{streak}🔥",                        "Streak"),
+            (f"{len(unlocked)}/20",                "Achiev."),
+            (f"{sum(1 for v in ch_prog.values() if v.get('completed'))}/10", "Challs"),
         ]
-        bw, bh = 130, 64
-        bg_gap  = 12
+        bw, bh = 128, 62
+        bg_gap  = 10
         total_w = len(badges) * bw + (len(badges) - 1) * bg_gap
         bx      = cx - total_w // 2
         for val, lbl in badges:
@@ -175,20 +206,18 @@ class ProfileScreen:
             vs   = font("hud").render(val,  True, th["accent"])
             ls   = font("hint").render(lbl, True, th["lbl_text"])
             srf.blit(vs, vs.get_rect(centerx=card.centerx, top=card.top + 8))
-            srf.blit(ls, ls.get_rect(centerx=card.centerx, top=card.top + 38))
+            srf.blit(ls, ls.get_rect(centerx=card.centerx, top=card.top + 36))
             bx += bw + bg_gap
 
         pygame.draw.line(srf, th["divider"],
-                         (40, badge_y + bh + 18), (WIN_W - 40, badge_y + bh + 18), 1)
+                        (40, badge_y + bh + 16), (WIN_W - 40, badge_y + bh + 16), 1)
 
         # Detailed stat rows
         games    = stats.get("games_played", 0)
-        total_sc = stats.get("total_score",  0)
         avg_sc   = (total_sc // games) if games else 0
         total_mv = stats.get("total_moves",  0)
-        avg_mv   = (total_mv // games)  if games else 0
+        avg_mv   = (total_mv // games) if games else 0
         best_s   = stats.get("best_single", 0)
-        daily_ct = len(daily)
 
         stat_rows = [
             ("Total Score",        f"{total_sc:,}"),
@@ -196,14 +225,14 @@ class ProfileScreen:
             ("Average Score",      f"{avg_sc:,}"),
             ("Total Moves",        f"{total_mv:,}"),
             ("Avg Moves / Game",   str(avg_mv)),
-            ("Daily Puzzles Done", str(daily_ct)),
+            ("Daily Puzzles Done", str(len(daily))),
             ("Puzzle Streak",      f"{streak} day{'s' if streak != 1 else ''}"),
         ]
 
-        row_top = badge_y + bh + 32
-        cw, ch2 = WIN_W - 100, 52
+        row_top = badge_y + bh + 30
+        cw, ch2 = WIN_W - 100, 50
         for i, (label, val) in enumerate(stat_rows):
-            y    = row_top + i * (ch2 + 8)
+            y    = row_top + i * (ch2 + 7)
             rect = pygame.Rect(50, y, cw, ch2)
             bg   = (48, 50, 68) if dark else (212, 206, 194)
             draw_rounded_rect(srf, bg, rect, 10)
@@ -269,9 +298,9 @@ class ProfileScreen:
 
                 bar_col = CATEGORY_COLORS[cat] if done else th["divider"]
                 pygame.draw.rect(srf, bar_col,
-                                 pygame.Rect(card.left, card.top, 4, card.height),
-                                 border_top_left_radius=10,
-                                 border_bottom_left_radius=10)
+                                pygame.Rect(card.left, card.top, 4, card.height),
+                                border_top_left_radius=10,
+                                border_bottom_left_radius=10)
 
                 ic_cx, ic_cy = card.left + 32, card.centery
                 pygame.draw.circle(

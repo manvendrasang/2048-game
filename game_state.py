@@ -18,9 +18,9 @@ from systems.slide_anim import SlideAnimSystem
 
 class GameState:
     def __init__(self, size=DEFAULT_BOARD, mode=MODE_CLASSIC,
-                 target_tile=TARGET_TILE_DEFAULT,
-                 time_budget=TIME_ATTACK_SECONDS,
-                 challenge: dict | None = None):
+                target_tile=TARGET_TILE_DEFAULT,
+                time_budget=TIME_ATTACK_SECONDS,
+                challenge: dict | None = None):
         self.size         = size
         self.mode         = mode
         self.target_tile  = target_tile
@@ -40,6 +40,7 @@ class GameState:
         self.won          = False
         self.win_shown    = False
         self.undo_stack   = []
+        self.undo_tokens  = 3     # refills on reset; 0 = no more undos
 
         self.tile_scales  = [[1.0]*size for _ in range(size)]
         self.score_popups = []
@@ -79,9 +80,10 @@ class GameState:
         if len(self.undo_stack) > 10:
             self.undo_stack.pop(0)
 
-    def pop_undo(self):
-        if not self.undo_stack:
-            return
+    def pop_undo(self) -> bool:
+        """Returns True if undo was performed."""
+        if not self.undo_stack or self.undo_tokens <= 0:
+            return False
         snap, sc, mv, el = self.undo_stack.pop()
         self.matrix      = [row[:] for row in snap]
         self.score       = sc
@@ -91,6 +93,12 @@ class GameState:
         self.game_over   = False
         self.won         = False
         self.slide_anim.clear()
+        self.undo_tokens -= 1
+        return True
+
+    @property
+    def can_undo(self) -> bool:
+        return bool(self.undo_stack) and self.undo_tokens > 0
 
 
     def empty_cells(self):
@@ -195,7 +203,7 @@ class GameState:
                     gv = ch["goal_value"]
                     ml = ch["move_limit"]
                     if (gt == "tile"  and ht >= gv) or \
-                       (gt == "score" and self.score >= gv):
+                    (gt == "score" and self.score >= gv):
                         self.won       = True
                         self.game_over = True
                         self._finish_challenge()
@@ -206,7 +214,7 @@ class GameState:
                     # daily puzzle ends only when no moves remain
                     pass
                 elif (self.mode == MODE_TARGET and ht >= self.target_tile) or \
-                     (self.mode == MODE_CLASSIC and ht >= 2048):
+                    (self.mode == MODE_CLASSIC and ht >= 2048):
                     self.won       = True
                     self.game_over = True
                     self._finish_game()
@@ -265,7 +273,7 @@ class GameState:
             s = int(self.elapsed) % 60
             extra = f"{m:02d}:{s:02d}"
         add_leaderboard_entry(self.score, self.mode, extra,
-                              board_size=self.size)
+                            board_size=self.size)
 
     def can_move(self) -> bool:
         n = self.size
@@ -280,7 +288,7 @@ class GameState:
         return False
 
     def reset(self, size=None, mode=None, target_tile=None,
-              time_budget=None, challenge=None):
+            time_budget=None, challenge=None):
         if size        is not None: self.size        = size
         if mode        is not None: self.mode        = mode
         if target_tile is not None: self.target_tile = target_tile
@@ -296,6 +304,7 @@ class GameState:
         self.challenge_stars  = 0
         self.daily_finished   = False
         self.undo_stack       = []
+        self.undo_tokens      = 3
         self.tile_scales      = [[1.0]*self.size for _ in range(self.size)]
         self.score_popups     = []
         self.merge_events     = []
