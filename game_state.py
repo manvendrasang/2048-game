@@ -45,6 +45,7 @@ class GameState:
         self.tile_scales  = [[1.0]*size for _ in range(size)]
         self.score_popups = []
         self.merge_events = []
+        self.merge_flash  = {}   # {(r,c): flash_t}  1.0=full bright → 0.0=done
         self.slide_anim   = SlideAnimSystem()
 
 
@@ -185,6 +186,9 @@ class GameState:
         # Build slide animation entirely in screen space
         if moved:
             self.slide_anim.build(before_screen, after_screen, self.size)
+            # Queue a flash on every merged tile — fires when slide completes
+            for (r, c, _) in self.merge_events:
+                self.merge_flash[(r, c)] = 1.0
 
         if moved:
             self.score += pts
@@ -308,6 +312,7 @@ class GameState:
         self.tile_scales      = [[1.0]*self.size for _ in range(self.size)]
         self.score_popups     = []
         self.merge_events     = []
+        self.merge_flash      = {}
         self.slide_anim.clear()
 
         # challenge: use prescribed starting matrix or random
@@ -337,7 +342,18 @@ class GameState:
                     self.tile_scales[r][c] = max(1.0, s - 0.06)
 
         # tick slide animation
-        self.slide_anim.update(dt)
+        slide_done = self.slide_anim.update(dt)
+
+        # decay merge flash — only start decaying once slide is finished
+        if slide_done and self.merge_flash:
+            decay_rate = dt / 0.35   # flash lasts ~0.35 seconds
+            done_keys  = []
+            for key in list(self.merge_flash):
+                self.merge_flash[key] = max(0.0, self.merge_flash[key] - decay_rate)
+                if self.merge_flash[key] <= 0.0:
+                    done_keys.append(key)
+            for k in done_keys:
+                del self.merge_flash[k]
 
         alive = []
         for p in self.score_popups:

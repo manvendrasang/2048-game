@@ -21,8 +21,6 @@ Data Files (auto-created in 'data/')
 - savedata.json    =last saved game
 - best.txt         =all-time best score
 
->
->Merge animation: the merged tile should briefly flash/pulse brighter before settling, not just scale
 >The board should have a subtle shadow under it to separate it from the background visually
 >Score counter should animate upward (rolling digits) rather than jumping instantly
 >Hint system — show the single best next move as a subtle arrow or tile highlight, togglable from options. This keeps casual players engaged

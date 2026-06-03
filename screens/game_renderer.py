@@ -90,6 +90,20 @@ def draw_board(surface: pygame.Surface, gs, haptic=None):
                     lbl = tf.render(str(val), True, getTextColor(val))
                     surface.blit(lbl, lbl.get_rect(center=(cx2, cy2)))
 
+                # Merge flash overlay — bright white pulse fading out
+                flash_t = gs.merge_flash.get((r, c), 0.0)
+                if flash_t > 0.0:
+                    alpha = int(flash_t * flash_t * 180)   # ease-in so peak is sharp
+                    if alpha > 0:
+                        flash_surf = pygame.Surface((w, h), pygame.SRCALPHA)
+                        pygame.draw.rect(
+                            flash_surf,
+                            (255, 255, 255, alpha),
+                            flash_surf.get_rect(),
+                            border_radius=max(4, int(10 * sc)),
+                        )
+                        surface.blit(flash_surf, (cx2 - w//2, cy2 - h//2))
+
     # Haptic border flash drawn on top of everything
     if haptic:
         haptic.update()
