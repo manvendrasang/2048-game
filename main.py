@@ -1,11 +1,6 @@
 # pylint: disable=missing-module-docstring, missing-class-docstring, missing-function-docstring, no-name-in-module, no-member, unused-import, invalid-name
 # pylint: disable=global-statement, unnecessary-dunder-call, redefined-outer-name, global-variable-not-assigned, line-too-long
 
-# main.py
-# Entry point. Fullscreen display with centred panel.
-# Wires: menu, game, leaderboard, stats, save-slot, challenge picker,
-#        challenge result, background music, bg particles.
-
 import sys
 import pygame
 from pygame.locals import QUIT, KEYDOWN
@@ -34,7 +29,7 @@ from systems.bg_particles import BgParticleSystem
 from screens.menu       import MenuScreen
 from screens.game_renderer import (
     draw_board, draw_hud, draw_score_popups,
-    draw_game_over, draw_win, draw_pause, tile_center,
+    draw_game_over, draw_win, draw_pause, draw_hint, tile_center,
 )
 from screens.leaderboard         import LeaderboardScreen
 from screens.profile_screen      import ProfileScreen
@@ -86,10 +81,13 @@ paused             = False
 _save_slot_origin  = S_GAME
 _active_challenge  = None   # challenge dict for current/last challenge
 
-particle_sys = particles.ParticleSystem()
-shake_sys    = screenshake.ScreenShake()
-haptic       = HapticFeedback()
-score_anim   = ScoreAnimator()
+particle_sys  = particles.ParticleSystem()
+shake_sys     = screenshake.ScreenShake()
+haptic        = HapticFeedback()
+score_anim    = ScoreAnimator()
+
+_hint_dir:    str | None = None   # cached best direction
+_hint_pulse:  float      = 0.0    # drives the sine pulse animation
 
 menu_screen         = MenuScreen(PANEL)
 leader_screen       = LeaderboardScreen(PANEL)
@@ -158,6 +156,9 @@ def start_game(mode=MODE_CLASSIC, size=DEFAULT_BOARD,
     particle_sys.clear()
     haptic.__init__()
     score_anim.snap(0)
+    global _hint_dir, _hint_pulse
+    _hint_dir   = None
+    _hint_pulse = 0.0
     paused = False
     current_screen = S_GAME
     # music context
@@ -287,11 +288,13 @@ def handle_game_event(event):
             if gs.won:
                 sound.play("win")
 
-            # Check achievements after every move — catches score/tile milestones
-            # immediately so they are saved to disk even if window closes soon after
+            # Check achievements after every move
             newly = check_and_unlock_achievements()
             if newly:
                 _ach_queue.extend(newly)
+
+            # Recompute hint for next move
+            _recompute_hint()
 
             if gs.game_over and gs.mode == MODE_CHALLENGE:
                 _show_challenge_result()
@@ -309,13 +312,22 @@ def handle_game_event(event):
             start_game(mode=gs.mode, size=gs.size,
                     target_tile=gs.target_tile,
                     time_budget=gs.time_budget)
+    elif k == pygame.K_h:
+        from data.settings import get as get_setting, set as set_setting
+        new_val = not get_setting("hint_enabled")
+        set_setting("hint_enabled", new_val)
+        if new_val and gs and not gs.game_over:
+            _recompute_hint()
+        else:
+            global _hint_dir
+            _hint_dir = None
     elif k == pygame.K_u and not gs.game_over:
         if gs.mode != MODE_DAILY:
             if gs.can_undo:
                 gs.pop_undo()
                 sound.play("undo")
             else:
-                haptic.invalid_move()   # red flash when no tokens left
+                haptic.invalid_move()
     elif k == pygame.K_s and not gs.game_over and gs.mode not in (MODE_CHALLENGE, MODE_DAILY):
         open_save_slots("save", S_GAME)
     elif k == pygame.K_l and gs.mode not in (MODE_CHALLENGE, MODE_DAILY):
@@ -399,6 +411,20 @@ def handle_save_slot_event(event):
 
 #  Main loop
 
+def _recompute_hint():
+    global _hint_dir, _hint_pulse
+    if gs is None or gs.game_over:
+        _hint_dir = None
+        return
+    from systems.hint import best_direction
+    from data.settings import get as get_setting
+    if get_setting("hint_enabled"):
+        _hint_dir   = best_direction(gs.matrix, gs.size)
+        _hint_pulse = 0.0
+    else:
+        _hint_dir = None
+
+
 def _draw_ach_toast(dt: float):
     """Draw an achievement unlock notification toast over everything."""
     global _ach_timer, _ach_queue
@@ -444,7 +470,7 @@ def _draw_ach_toast(dt: float):
 
 
 def main():
-    global current_screen
+    global current_screen, _hint_dir, _hint_pulse
     music.set_context("menu")
 
     while True:
@@ -492,6 +518,7 @@ def main():
                 particle_sys.update()
                 score_anim.set_target(gs.score)
                 score_anim.tick(dt)
+                _hint_pulse += dt
             shake_sys.update()
         elif current_screen == S_LEADER:
             leader_screen.update()
@@ -518,6 +545,9 @@ def main():
             draw_board(PANEL, gs, haptic)
             draw_score_popups(PANEL, gs)
             particle_sys.draw(PANEL)
+            from data.settings import get as get_setting
+            if get_setting("hint_enabled") and not gs.game_over and not paused:
+                draw_hint(PANEL, gs, _hint_dir, _hint_pulse)
             if gs.game_over and gs.won and gs.mode not in (MODE_CHALLENGE, MODE_DAILY):
                 draw_win(PANEL, gs)
             elif gs.game_over and gs.mode not in (MODE_CHALLENGE, MODE_DAILY):

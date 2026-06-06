@@ -1,7 +1,8 @@
 # pylint: disable=missing-module-docstring, missing-class-docstring, missing-function-docstring, unused-import, multiple-statements, protected-access
-# pylint: disable=unused-argument, no-member
+# pylint: disable=unused-argument, no-member, unused-variable
 
 import pygame
+import math
 import constants as C
 from constants import (
     WIN_W, WIN_H, BOARD_PX, BOARD_TOP, BOARD_LEFT, PADDING,
@@ -31,6 +32,83 @@ def _choose_tile_font(value: int) -> pygame.font.Font:
     if d <= 2:   return font("tile_lg")
     elif d == 3: return font("tile_md")
     else:        return font("tile_sm")
+
+
+def draw_hint(surface: pygame.Surface, gs, hint_dir: str | None, pulse_t: float):
+    """Draw a pulsing directional arrow and tile highlights for the hint."""
+    if not hint_dir or gs.game_over:
+        return
+
+    th     = theme.get()
+    n      = gs.size
+    pulse  = (math.sin(pulse_t * 4.0) + 1.0) / 2.0   # 0–1 sine pulse
+    alpha  = int(60 + pulse * 110)                     # 60–170
+
+    # Highlight tiles that will move in this direction
+    _draw_hint_tile_glow(surface, gs, hint_dir, n, alpha)
+
+    # Arrow at board edge
+    _draw_hint_arrow(surface, hint_dir, alpha, th)
+
+
+def _draw_hint_tile_glow(surface, gs, direction, n, alpha):
+    """Subtle cyan glow on tiles that are not already at their final position."""
+    import copy
+    from systems.hint import _ROTATION_MAP, _rotate_cw, _slide_left_score
+    rot = _ROTATION_MAP[direction]
+    before = copy.deepcopy(gs.matrix)
+    m      = copy.deepcopy(gs.matrix)
+    for _ in range(rot):
+        m = _rotate_cw(m, n)
+    _, _, after_rot = _slide_left_score(m, n)
+    for _ in range((4 - rot) % 4):
+        after_rot = _rotate_cw(after_rot, n)
+
+    glow_col = (100, 200, 255)
+    for r in range(n):
+        for c in range(n):
+            if before[r][c] != 0 and before[r][c] != after_rot[r][c]:
+                base  = tile_rect(r, c, n)
+                gsurf = pygame.Surface((base.width, base.height), pygame.SRCALPHA)
+                pygame.draw.rect(
+                    gsurf,
+                    (*glow_col, alpha // 2),
+                    gsurf.get_rect(),
+                    border_radius=10,
+                )
+                surface.blit(gsurf, base.topleft)
+
+
+def _draw_hint_arrow(surface, direction, alpha, th):
+    """Draw a filled triangle arrow at the board edge pointing inward."""
+    board_rect = pygame.Rect(BOARD_LEFT, BOARD_TOP, BOARD_PX, BOARD_PX)
+    aw, ah     = 26, 18
+    pad        = 14
+
+    arrow_col  = (*th["accent"][:3], alpha)
+    surf       = pygame.Surface((BOARD_PX + pad*4, BOARD_PX + pad*4), pygame.SRCALPHA)
+    ox         = pad * 2
+    oy         = pad * 2
+
+    if direction == "left":
+        tip  = (ox - pad,                  oy + BOARD_PX//2)
+        p1   = (ox - pad + ah,             oy + BOARD_PX//2 - aw//2)
+        p2   = (ox - pad + ah,             oy + BOARD_PX//2 + aw//2)
+    elif direction == "right":
+        tip  = (ox + BOARD_PX + pad,       oy + BOARD_PX//2)
+        p1   = (ox + BOARD_PX + pad - ah,  oy + BOARD_PX//2 - aw//2)
+        p2   = (ox + BOARD_PX + pad - ah,  oy + BOARD_PX//2 + aw//2)
+    elif direction == "up":
+        tip  = (ox + BOARD_PX//2,          oy - pad)
+        p1   = (ox + BOARD_PX//2 - aw//2,  oy - pad + ah)
+        p2   = (ox + BOARD_PX//2 + aw//2,  oy - pad + ah)
+    else:   # down
+        tip  = (ox + BOARD_PX//2,          oy + BOARD_PX + pad)
+        p1   = (ox + BOARD_PX//2 - aw//2,  oy + BOARD_PX + pad - ah)
+        p2   = (ox + BOARD_PX//2 + aw//2,  oy + BOARD_PX + pad - ah)
+
+    pygame.draw.polygon(surf, arrow_col, [tip, p1, p2])
+    surface.blit(surf, (BOARD_LEFT - ox, BOARD_TOP - oy))
 
 
 def draw_board(surface: pygame.Surface, gs, haptic=None):

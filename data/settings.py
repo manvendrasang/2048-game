@@ -7,11 +7,12 @@ _DIR  = os.path.dirname(__file__)
 _FILE = os.path.join(_DIR, "settings.json")
 
 _DEFAULTS = {
-    "theme":        "dark",
-    "sfx_enabled":  True,
+    "theme":         "dark",
+    "sfx_enabled":   True,
     "music_enabled": True,
-    "sfx_volume":   0.8,
-    "music_volume": 0.4,
+    "sfx_volume":    0.8,
+    "music_volume":  0.4,
+    "hint_enabled":  False,
 }
 
 _current: dict = dict(_DEFAULTS)

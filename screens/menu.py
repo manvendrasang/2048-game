@@ -65,28 +65,27 @@ class MenuScreen:
             ("← Back",            "back"),
         ], cx, 225, w=300, h=52, gap=42)
 
-        # options menu (toggle rows built dynamically in draw)
-        # options layout — compacted to fit 3 toggles + 2 sliders + 2 buttons
+        # options layout: 4 toggles (44px h, 10px gap) + divider + 2 sliders + divider + 2 buttons
         self._opt_btns = _make_buttons([
             ("Controls",  "controls"),
             ("← Back",    "back"),
-        ], cx, 620, w=260, h=48, gap=10)
+        ], cx, 618, w=260, h=48, gap=10)
 
-        tw, th_h = 280, 46
+        tw, th_h = 300, 44
         ox = cx - tw // 2
-        self._toggle_sound_rect = pygame.Rect(ox, 195, tw, th_h)
-        self._toggle_music_rect = pygame.Rect(ox, 252, tw, th_h)
-        self._toggle_theme_rect = pygame.Rect(ox, 309, tw, th_h)
+        self._toggle_sound_rect = pygame.Rect(ox, 170, tw, th_h)
+        self._toggle_music_rect = pygame.Rect(ox, 224, tw, th_h)
+        self._toggle_theme_rect = pygame.Rect(ox, 278, tw, th_h)
+        self._toggle_hint_rect  = pygame.Rect(ox, 332, tw, th_h)
 
-        # Volume sliders (below toggles)
-        sw, sh = 380, 50
+        sw, sh = 400, 48
         sx = cx - sw // 2
         self._slider_sfx   = Slider(
-            pygame.Rect(sx, 372, sw, sh), "SFX Vol",
+            pygame.Rect(sx, 400, sw, sh), "SFX Vol",
             initial_value=sound.get_volume(),
         )
         self._slider_music = Slider(
-            pygame.Rect(sx, 434, sw, sh), "Music Vol",
+            pygame.Rect(sx, 460, sw, sh), "Music Vol",
             initial_value=music.get_volume(),
         )
 
@@ -158,6 +157,12 @@ class MenuScreen:
                 sound.play("click")
                 from data.settings import set as set_setting
                 set_setting("theme", new_theme)
+                return None
+            if self._toggle_hint_rect.collidepoint(pos):
+                from data.settings import get as get_setting, set as set_setting
+                new_val = not get_setting("hint_enabled")
+                set_setting("hint_enabled", new_val)
+                sound.play("click")
                 return None
             for btn, action in self._opt_btns:
                 if btn.rect.collidepoint(pos):
@@ -281,17 +286,24 @@ class MenuScreen:
             on_text="Dark", off_text="Light",
         )
 
-        pygame.draw.line(srf, th["divider"],
-                        (WIN_W//2 - 160, 366), (WIN_W//2 + 160, 366), 1)
+        # Hint toggle
+        from data.settings import get as get_setting
+        self._draw_toggle(
+            srf, th, self._toggle_hint_rect,
+            label="Move Hint", state=get_setting("hint_enabled"),
+            on_text="ON", off_text="OFF",
+        )
 
-        # Volume sliders
+        pygame.draw.line(srf, th["divider"],
+                        (WIN_W//2 - 170, 386), (WIN_W//2 + 170, 386), 1)
+
         vol_lbl = font("hint").render("Volume", True, th["lbl_text"])
-        blit_centered(srf, vol_lbl, WIN_W//2, 360)
+        blit_centered(srf, vol_lbl, WIN_W//2, 393)
         self._slider_sfx.draw(srf, th)
         self._slider_music.draw(srf, th)
 
         pygame.draw.line(srf, th["divider"],
-                        (WIN_W//2 - 160, 498), (WIN_W//2 + 160, 498), 1)
+                    (WIN_W//2 - 170, 518), (WIN_W//2 + 170, 518), 1)
 
         for btn, _ in self._opt_btns:
             btn.draw(srf, th)
@@ -320,16 +332,17 @@ class MenuScreen:
         self._draw_header(srf, th, "Controls")
 
         controls = [
-            ("Arrow Keys",    "Move tiles"),
-            ("U",             "Undo last move"),
-            ("R",             "Restart game"),
-            ("S",             "Save game"),
-            ("P",             "Pause / Resume"),
-            ("T",             "Toggle Dark / Light theme"),
-            ("M",             "Mute / Unmute SFX"),
-            ("N",             "Toggle background music"),
-            ("3 – 6",         "Change board size"),
-            ("ESC",           "Return to main menu"),
+            ("Arrow Keys",  "Move tiles"),
+            ("U",           "Undo last move (3 per game)"),
+            ("H",           "Toggle move hint"),
+            ("R",           "Restart game"),
+            ("S",           "Save game"),
+            ("P",           "Pause / Resume"),
+            ("T",           "Toggle Dark / Light theme"),
+            ("M",           "Mute / Unmute SFX"),
+            ("N",           "Toggle background music"),
+            ("3 – 6",       "Change board size"),
+            ("ESC",         "Return to main menu"),
         ]
 
         row_h  = 38
