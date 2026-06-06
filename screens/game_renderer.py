@@ -229,6 +229,58 @@ def _draw_undo_tokens(surface: pygame.Surface, gs, th: dict):
             pygame.draw.circle(surface, th["hint_text"], (cx, y), r, 1)
 
 
+def _draw_timer_bar(surface: pygame.Surface, elapsed: float,
+                    budget: float, th: dict):
+    """Horizontal timer bar just above the board. Shrinks as time runs out."""
+    remaining = max(0.0, budget - elapsed)
+    fraction  = remaining / budget if budget > 0 else 0.0
+
+    bar_x  = BOARD_LEFT
+    bar_y  = BOARD_TOP - 12
+    bar_w  = BOARD_PX
+    bar_h  = 6
+    radius = 3
+
+    # Track (empty background)
+    track = pygame.Rect(bar_x, bar_y, bar_w, bar_h)
+    draw_rounded_rect(surface, th["divider"], track, radius)
+
+    # Fill — colour transitions green → amber → red
+    if fraction > 0:
+        fill_w = max(radius * 2, int(bar_w * fraction))
+        if fraction > 0.5:
+            # green → amber
+            t   = (1.0 - fraction) * 2          # 0 at full, 1 at 50%
+            col = (
+                int(80  + t * (220 - 80)),       # r: 80→220
+                int(200 - t * (200 - 160)),      # g: 200→160
+                int(80  - t * 80),               # b: 80→0
+            )
+        else:
+            # amber → red
+            t   = (0.5 - fraction) * 2           # 0 at 50%, 1 at 0%
+            col = (220, int(160 - t * 160), 0)   # g: 160→0
+
+        # Pulse the fill when under 20 seconds
+        if remaining < 20:
+            pulse = (math.sin(elapsed * 8) + 1) / 2   # fast sine 0–1
+            col   = tuple(min(255, int(c + pulse * 40)) for c in col)
+
+        fill = pygame.Rect(bar_x, bar_y, fill_w, bar_h)
+        draw_rounded_rect(surface, col, fill, radius)
+
+        # Bright leading edge glow
+        if fill_w > 4:
+            glow_surf = pygame.Surface((4, bar_h), pygame.SRCALPHA)
+            pygame.draw.rect(
+                glow_surf,
+                (255, 255, 255, 120),
+                glow_surf.get_rect(),
+                border_radius=radius,
+            )
+            surface.blit(glow_surf, (bar_x + fill_w - 4, bar_y))
+
+
 def draw_hud(surface: pygame.Surface, gs, sound_on: bool, paused: bool,
             displayed_score: int | None = None):
     th = theme.get()
@@ -271,6 +323,9 @@ def draw_hud(surface: pygame.Surface, gs, sound_on: bool, paused: bool,
         color     = (220, 80, 80) if remaining < 20 else th["accent"]
         t_lbl     = font("timer").render(f"  {format_time(remaining)}", True, color)
         surface.blit(t_lbl, t_lbl.get_rect(right=WIN_W - 30, centery=mode_y + 10))
+
+        # Timer bar just above the board
+        _draw_timer_bar(surface, gs.elapsed, gs.time_budget, th)
     elif gs.mode == MODE_CHALLENGE and gs.challenge:
         ch = gs.challenge
         gt = ch["goal_type"]
