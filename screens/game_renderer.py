@@ -1,8 +1,8 @@
 # pylint: disable=missing-module-docstring, missing-class-docstring, missing-function-docstring, unused-import, multiple-statements, protected-access
-# pylint: disable=unused-argument, no-member, unused-variable
+# pylint: disable=unused-argument, no-member, unused-variable, import-outside-toplevel, ungrouped-imports
 
-import pygame
 import math
+import pygame
 import constants as C
 from constants import (
     WIN_W, WIN_H, BOARD_PX, BOARD_TOP, BOARD_LEFT, PADDING,
@@ -140,12 +140,15 @@ def draw_board(surface: pygame.Surface, gs, haptic=None):
     draw_rounded_rect(surface, th["board_bg"], board_rect, 14)
 
     animating = gs.slide_anim.animating
+    hc        = theme.is_high_contrast()
 
     # Draw empty cell slots always
     for r in range(n):
         for c in range(n):
             base = tile_rect(r, c, n)
             draw_rounded_rect(surface, th["cell_empty"], base, 10)
+            if hc:
+                pygame.draw.rect(surface, th["divider"], base, width=1, border_radius=10)
 
     if animating:
         # During slide: draw non-moving tiles from final matrix, skip tiles
@@ -160,16 +163,19 @@ def draw_board(surface: pygame.Surface, gs, haptic=None):
                 if val == 0 or (r, c) in moving_dsts:
                     continue
                 base = tile_rect(r, c, n)
-                draw_rounded_rect(surface, getColor(val), base, 10)
+                draw_rounded_rect(surface, getColor(val, hc), base, 10)
+                if hc:
+                    pygame.draw.rect(surface, th["tile_border"], base, width=2, border_radius=10)
                 tf  = _choose_tile_font(val)
-                lbl = tf.render(str(val), True, getTextColor(val))
+                lbl = tf.render(str(val), True, getTextColor(val, hc))
                 surface.blit(lbl, lbl.get_rect(center=base.center))
 
         # Draw sliding tiles on top
         gs.slide_anim.draw(
             surface, n, cell_size,
-            getColor, getTextColor, _choose_tile_font,
-            draw_rounded_rect, theme,
+            lambda v: getColor(v, hc), lambda v: getTextColor(v, hc),
+            _choose_tile_font, draw_rounded_rect, theme,
+            tile_border=th.get("tile_border") if hc else None,
         )
     else:
         # Normal draw with scale animations (spawn pop, merge pop)
@@ -182,11 +188,14 @@ def draw_board(surface: pygame.Surface, gs, haptic=None):
                 w = int(base.width  * sc)
                 h = int(base.height * sc)
                 tr = pygame.Rect(cx2 - w//2, cy2 - h//2, w, h)
-                color = getColor(val) if val else th["cell_empty"]
+                color = getColor(val, hc) if val else th["cell_empty"]
                 draw_rounded_rect(surface, color, tr, max(4, int(10 * sc)))
+                if hc and val:
+                    pygame.draw.rect(surface, th["tile_border"], tr,
+                                    width=2, border_radius=max(4, int(10 * sc)))
                 if val:
                     tf  = _choose_tile_font(val)
-                    lbl = tf.render(str(val), True, getTextColor(val))
+                    lbl = tf.render(str(val), True, getTextColor(val, hc))
                     surface.blit(lbl, lbl.get_rect(center=(cx2, cy2)))
 
                 # Merge flash overlay — bright white pulse fading out

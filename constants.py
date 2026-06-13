@@ -70,6 +70,24 @@ THEME_LIGHT = {
     "toggle_off":   (180,  80,  60),
 }
 
+# Theme colours (high contrast) — pure black/white/yellow for max readability
+THEME_HIGH_CONTRAST = {
+    "bg":           (  0,   0,   0),
+    "board_bg":     ( 20,  20,  20),
+    "cell_empty":   ( 35,  35,  35),
+    "hud_text":     (255, 255, 255),
+    "score_box_bg": ( 25,  25,  25),
+    "accent":       (255, 220,   0),
+    "hint_text":    (180, 180, 180),
+    "move_text":    (220, 220, 220),
+    "lbl_text":     (200, 200, 200),
+    "outer_bg":     (  0,   0,   0),
+    "divider":      (255, 255, 255),
+    "toggle_on":    (  0, 220,   0),
+    "toggle_off":   (220,   0,   0),
+    "tile_border":  (  0,   0,   0),   # extra: outline drawn on every tile
+}
+
 # Tile colours
 BLACK       = (  0,   0,   0)
 WHITE       = (255, 255, 255)
@@ -91,12 +109,35 @@ color_dict = {
 }
 FALLBACK_COLOR = (60, 180, 120)
 
+# High-contrast tile colours — every value maximally distinct, no gradients
+color_dict_high_contrast = {
+    0:    ( 35,  35,  35),
+    2:    (255, 255, 255),
+    4:    (255, 230,   0),
+    8:    (255, 140,   0),
+    16:   (255,  60,   0),
+    32:   (220,   0,   0),
+    64:   (180,   0, 180),
+    128:  (  0, 100, 255),
+    256:  (  0, 180, 255),
+    512:  (  0, 220, 120),
+    1024: (130, 255,   0),
+    2048: (255,   0, 140),
+}
+FALLBACK_COLOR_HC = (255, 255, 255)
 
-def getColor(value: int) -> tuple:
+
+def getColor(value: int, high_contrast: bool = False) -> tuple:
+    if high_contrast:
+        return color_dict_high_contrast.get(value, FALLBACK_COLOR_HC)
     return color_dict.get(value, FALLBACK_COLOR)
 
 
-def getTextColor(value: int) -> tuple:
+def getTextColor(value: int, high_contrast: bool = False) -> tuple:
+    if high_contrast:
+        # Light tile backgrounds need dark text; everything else white
+        light_bgs = {0, 2, 4, 8, 16, 256, 512, 1024}
+        return (0, 0, 0) if value in light_bgs else WHITE
     return (119, 110, 101) if value in (0, 2, 4) else WHITE
 
 

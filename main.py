@@ -1,5 +1,5 @@
-# pylint: disable=missing-module-docstring, missing-class-docstring, missing-function-docstring, no-name-in-module, no-member, unused-import, invalid-name
-# pylint: disable=global-statement, unnecessary-dunder-call, redefined-outer-name, global-variable-not-assigned, line-too-long
+# pylint: disable=missing-module-docstring, missing-class-docstring, missing-function-docstring, no-name-in-module, no-member, unused-import, invalid-name, reimported
+# pylint: disable=global-statement, unnecessary-dunder-call, redefined-outer-name, global-variable-not-assigned, line-too-long, wrong-import-position, import-outside-toplevel
 
 import sys
 import pygame

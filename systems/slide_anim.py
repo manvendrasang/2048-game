@@ -59,9 +59,9 @@ class SlideAnimSystem:
         self.animating = False
 
     def build(self,
-              before_screen: list[list[int]],
-              after_screen:  list[list[int]],
-              n: int):
+            before_screen: list[list[int]],
+            after_screen:  list[list[int]],
+            n: int):
         """
         Both matrices are in SCREEN coords (no rotation applied).
         We match each non-zero destination tile to its closest available
@@ -150,7 +150,8 @@ class SlideAnimSystem:
         return False
 
     def draw(self, surface: pygame.Surface, n: int, cell_size: float,
-             get_color, get_text_color, choose_font, draw_rrect, theme):
+            get_color, get_text_color, choose_font, draw_rrect, theme,
+            tile_border=None):
         th = theme.get()
         for slide in self._slides:
             cx, cy = slide.current_pos()
@@ -158,6 +159,8 @@ class SlideAnimSystem:
             tr = pygame.Rect(cx - w//2, cy - h//2, w, h)
             color = get_color(slide.value)
             draw_rrect(surface, color, tr, 10)
+            if tile_border:
+                pygame.draw.rect(surface, tile_border, tr, width=2, border_radius=10)
             tf  = choose_font(slide.value)
             lbl = tf.render(str(slide.value), True, get_text_color(slide.value))
             surface.blit(lbl, lbl.get_rect(center=(cx, cy)))

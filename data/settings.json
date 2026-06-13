@@ -1,0 +1,8 @@
+{
+  "theme": "dark",
+  "sfx_enabled": true,
+  "music_enabled": true,
+  "sfx_volume": 0.8,
+  "music_volume": 0.4,
+  "hint_enabled": true
+}

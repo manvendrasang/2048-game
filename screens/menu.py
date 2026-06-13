@@ -1,4 +1,4 @@
-# pylint: disable=missing-module-docstring, missing-function-docstring, missing-class-docstring, no-member, multiple-statements
+# pylint: disable=missing-module-docstring, missing-function-docstring, missing-class-docstring, no-member, multiple-statements, import-outside-toplevel
 
 import pygame
 from constants import WIN_W, WIN_H, MODE_CLASSIC, MODE_TARGET, MODE_TIME_ATTACK
@@ -278,13 +278,8 @@ class MenuScreen:
             on_text="ON", off_text="OFF",
         )
 
-        # Theme toggle
-        is_dark = theme.name() == "dark"
-        self._draw_toggle(
-            srf, th, self._toggle_theme_rect,
-            label="Theme", state=is_dark,
-            on_text="Dark", off_text="Light",
-        )
+        # Theme cycle (dark / light / high contrast)
+        self._draw_theme_cycle(srf, th, self._toggle_theme_rect)
 
         # Hint toggle
         from data.settings import get as get_setting
@@ -303,7 +298,7 @@ class MenuScreen:
         self._slider_music.draw(srf, th)
 
         pygame.draw.line(srf, th["divider"],
-                    (WIN_W//2 - 170, 518), (WIN_W//2 + 170, 518), 1)
+                        (WIN_W//2 - 170, 518), (WIN_W//2 + 170, 518), 1)
 
         for btn, _ in self._opt_btns:
             btn.draw(srf, th)
@@ -311,7 +306,7 @@ class MenuScreen:
     def _draw_toggle(self, srf, th, rect, label, state, on_text, off_text):
         """Draw a labelled toggle row."""
         # background card
-        card_col = (50, 50, 70) if theme.name() == "dark" else (210, 200, 190)
+        card_col = (50, 50, 70) if theme.name() != "light" else (210, 200, 190)
         draw_rounded_rect(srf, card_col, rect, 10)
 
         lbl = font("label").render(label, True, th["hud_text"])
@@ -328,6 +323,34 @@ class MenuScreen:
         v = font("small").render(val_txt, True, (255, 255, 255))
         srf.blit(v, v.get_rect(center=pill.center))
 
+    def _draw_theme_cycle(self, srf, th, rect):
+        """Draw the theme row as a 3-state cycle button."""
+        card_col = (50, 50, 70) if theme.name() != "high_contrast" else (40, 40, 40)
+        if theme.name() == "light":
+            card_col = (210, 200, 190)
+        draw_rounded_rect(srf, card_col, rect, 10)
+
+        lbl_col = th["hud_text"]
+        lbl = font("label").render("Theme", True, lbl_col)
+        srf.blit(lbl, (rect.left + 16, rect.centery - lbl.get_height()//2))
+
+        theme_labels = {
+            "dark":          ("Dark",          (80, 100, 200)),
+            "light":         ("Light",         (220, 180, 80)),
+            "high_contrast": ("High Contrast", (255, 220, 0)),
+        }
+        text, pill_col = theme_labels.get(theme.name(), ("Dark", (80, 100, 200)))
+
+        pill_w = 150 if theme.name() == "high_contrast" else 100
+        pill_h = 32
+        pill_x = rect.right - pill_w - 12
+        pill_y = rect.centery - pill_h//2
+        pill   = pygame.Rect(pill_x, pill_y, pill_w, pill_h)
+        draw_rounded_rect(srf, pill_col, pill, 16)
+        fg = (0, 0, 0) if theme.name() == "high_contrast" else (255, 255, 255)
+        v = font("small").render(text, True, fg)
+        srf.blit(v, v.get_rect(center=pill.center))
+
     def _draw_controls(self, srf, th):
         self._draw_header(srf, th, "Controls")
 
@@ -338,7 +361,7 @@ class MenuScreen:
             ("R",           "Restart game"),
             ("S",           "Save game"),
             ("P",           "Pause / Resume"),
-            ("T",           "Toggle Dark / Light theme"),
+            ("T",           "Cycle Dark / Light / High Contrast"),
             ("M",           "Mute / Unmute SFX"),
             ("N",           "Toggle background music"),
             ("3 – 6",       "Change board size"),
@@ -363,7 +386,7 @@ class MenuScreen:
             # alternating row tint
             if i % 2 == 0:
                 row_rect = pygame.Rect(left - 8, y - 4, WIN_W - 2*(left-8), row_h - 4)
-                bg = (40, 40, 55) if theme.name() == "dark" else (230, 222, 210)
+                bg = (40, 40, 55) if theme.name() != "light" else (230, 222, 210)
                 draw_rounded_rect(srf, bg, row_rect, 6)
 
             k_surf = font("small").render(f"[ {key} ]", True, th["accent"])
